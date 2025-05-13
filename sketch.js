@@ -1,180 +1,247 @@
-// Variables del juego
-let tamañoTablero = 8; // Tamaño fijo o podrías mantener los prompts
-let miTablero;
-let tableroEnemigo;
-let misBarcos = 3;
-let barcosEnemigos = 3;
-let turnoJugador = true;
-let juegoConfigurado = false;
-let juegoTerminado = false;
-let anchoCelda = 40;
-let margen = 50;
+let playerBoard = [];
+let enemyBoard = [];
+let boardSize = 8;
+let cellSize = 40;
+let playerShips = 0;
+let enemyShips = 0;
+let gameMode = '';
+let isPlayerTurn = true;
+let placingShips = false;
+let shipsToPlace = 0;
+let shipsPlaced = 0;
 
 function setup() {
-  createCanvas(800, 500);
-  textAlign(CENTER, CENTER);
-  
-  // Inicializar tableros
-  miTablero = crearTablero(tamañoTablero);
-  tableroEnemigo = crearTablero(tamañoTablero);
-  
-  // Colocar barcos aleatoriamente (o podrías hacer que el jugador los coloque)
-  colocarBarcosAleatorios(miTablero, misBarcos);
-  colocarBarcosAleatorios(tableroEnemigo, barcosEnemigos);
-  
-  juegoConfigurado = true;
+    createCanvas(800, 400).parent('game-container');
+    textAlign(CENTER, CENTER);
+    
+    // Configurar listeners de botones
+    document.getElementById('btn-rapido').addEventListener('click', startQuickGame);
+    document.getElementById('btn-manual').addEventListener('click', showManualConfig);
+    document.getElementById('btn-start-manual').addEventListener('click', startManualPlacement);
+    
+    // Inicializar tableros
+    initializeBoards();
+    drawBoards();
 }
 
-function draw() {
-  background(240);
-  
-  // Dibujar título
-  fill(0);
-  textSize(24);
-  text("Batalla Naval", width/2, 30);
-  
-  // Dibujar tableros
-  dibujarTablero(miTablero, margen, 80, false, "Tu Tablero");
-  dibujarTablero(tableroEnemigo, width/2 + margen, 80, true, "Tablero Enemigo");
-  
-  // Mostrar estado del juego
-  textSize(16);
-  text(`Tus barcos: ${misBarcos} | Barcos enemigos: ${barcosEnemigos}`, width/2, 60);
-  
-  if (juegoTerminado) {
+function initializeBoards() {
+    playerBoard = createEmptyBoard();
+    enemyBoard = createEmptyBoard();
+}
+
+function createEmptyBoard() {
+    let board = [];
+    for (let i = 0; i < boardSize; i++) {
+        board[i] = [];
+        for (let j = 0; j < boardSize; j++) {
+            board[i][j] = '-'; // -: agua, O: barco, X: fallo, !: impacto
+        }
+    }
+    return board;
+}
+
+function drawBoards() {
+    clear();
+    background(240);
+    
+    // Dibujar tablero del jugador
+    drawBoard(playerBoard, 0, 0, false);
+    
+    // Dibujar tablero enemigo
+    drawBoard(enemyBoard, width/2, 0, true);
+}
+
+function drawBoard(board, x, y, isEnemy) {
+    push();
+    translate(x, y);
+    
+    // Dibujar celdas
+    for (let i = 0; i < boardSize; i++) {
+        for (let j = 0; j < boardSize; j++) {
+            // Dibujar celda
+            stroke(0);
+            fill(255);
+            rect(j * cellSize, i * cellSize, cellSize, cellSize);
+            
+            // Dibujar contenido
+            let content = board[i][j];
+            if (isEnemy && content === 'O') content = '-'; // Ocultar barcos enemigos
+            
+            fill(0);
+            if (content === 'O') fill(0, 0, 255); // Barco (azul)
+            else if (content === 'X') fill(150);    // Fallo (gris)
+            else if (content === '!') fill(255, 0, 0); // Impacto (rojo)
+            
+            text(content, j * cellSize + cellSize/2, i * cellSize + cellSize/2);
+        }
+    }
+    
+    // Dibujar coordenadas
     fill(0);
-    textSize(32);
-    let mensaje = misBarcos > barcosEnemigos ? "¡VICTORIA!" : "¡DERROTA!";
-    text(mensaje, width/2, height - 50);
-  }
+    textSize(12);
+    for (let i = 0; i < boardSize; i++) {
+        text(i, i * cellSize + cellSize/2, -10); // Columnas arriba
+        text(i, -15, i * cellSize + cellSize/2); // Filas a la izquierda
+    }
+    
+    pop();
+}
+
+function startQuickGame() {
+    gameMode = 'quick';
+    initializeBoards();
+    
+    // Colocar barcos aleatorios (3-5 para cada jugador)
+    playerShips = Math.floor(random(3, 6));
+    enemyShips = playerShips;
+    
+    placeRandomShips(playerBoard, playerShips);
+    placeRandomShips(enemyBoard, enemyShips);
+    
+    updateStatus(`Modo Rápido - ${playerShips} barcos cada uno. Tu turno!`);
+    updateShipCount();
+    isPlayerTurn = true;
+    placingShips = false;
+    
+    drawBoards();
+}
+
+function showManualConfig() {
+    gameMode = 'manual';
+    initializeBoards();
+    document.getElementById('manual-placement').style.display = 'block';
+    updateStatus("Configura tu flota - Elige cuántos barcos deseas");
+    drawBoards();
+}
+
+function startManualPlacement() {
+    shipsToPlace = parseInt(document.getElementById('ship-amount').value);
+    if (shipsToPlace < 3 || shipsToPlace > 10) {
+        alert("Por favor elige entre 3 y 10 barcos");
+        return;
+    }
+    
+    playerShips = shipsToPlace;
+    enemyShips = shipsToPlace;
+    shipsPlaced = 0;
+    placingShips = true;
+    
+    // Colocar barcos enemigos aleatoriamente
+    placeRandomShips(enemyBoard, enemyShips);
+    
+    document.getElementById('manual-placement').style.display = 'none';
+    updateStatus(`Coloca tus ${shipsToPlace} barcos. Haz clic en tu tablero.`);
+    updateShipCount();
+    drawBoards();
+}
+
+function placeRandomShips(board, count) {
+    let placed = 0;
+    while (placed < count) {
+        let x = floor(random(boardSize));
+        let y = floor(random(boardSize));
+        
+        if (board[y][x] === '-') {
+            board[y][x] = 'O';
+            placed++;
+        }
+    }
 }
 
 function mousePressed() {
-  if (!turnoJugador || juegoTerminado || !juegoConfigurado) return;
-  
-  // Verificar clic en tablero enemigo
-  let tableroX = width/2 + margen;
-  let tableroY = 80;
-  let tableroAncho = tamañoTablero * anchoCelda;
-  
-  if (mouseX > tableroX && mouseX < tableroX + tableroAncho &&
-      mouseY > tableroY && mouseY < tableroY + tableroAncho) {
+    if (!gameMode) return;
     
-    let col = floor((mouseX - tableroX) / anchoCelda);
-    let fila = floor((mouseY - tableroY) / anchoCelda);
+    // Modo manual: colocación de barcos
+    if (placingShips) {
+        // Verificar clic en tablero del jugador (mitad izquierda)
+        if (mouseX > 0 && mouseX < width/2 && mouseY > 0 && mouseY < height) {
+            let col = floor(mouseX / cellSize);
+            let row = floor(mouseY / cellSize);
+            
+            if (playerBoard[row][col] === '-') {
+                playerBoard[row][col] = 'O';
+                shipsPlaced++;
+                
+                updateShipCount();
+                
+                if (shipsPlaced >= shipsToPlace) {
+                    placingShips = false;
+                    isPlayerTurn = true;
+                    updateStatus("Todos los barcos colocados. Tu turno!");
+                } else {
+                    updateStatus(`Coloca tus barcos (${shipsToPlace - shipsPlaced} restantes)`);
+                }
+                
+                drawBoards();
+            }
+        }
+        return;
+    }
     
-    // Realizar ataque
-    if (tableroEnemigo[fila][col] === '-' || tableroEnemigo[fila][col] === 'O') {
-      if (atacar(col, fila, tableroEnemigo)) {
-        barcosEnemigos--;
-      }
-      
-      turnoJugador = false;
-      
-      // Turno de la IA después de un breve retraso
-      setTimeout(turnoIA, 1000);
+    // Turno del jugador: ataque al tablero enemigo
+    if (isPlayerTurn && !placingShips) {
+        // Verificar clic en tablero enemigo (mitad derecha)
+        if (mouseX > width/2 && mouseX < width && mouseY > 0 && mouseY < height) {
+            let col = floor((mouseX - width/2) / cellSize);
+            let row = floor(mouseY / cellSize);
+            
+            if (enemyBoard[row][col] === 'O') {
+                enemyBoard[row][col] = '!';
+                enemyShips--;
+                updateStatus("¡Impacto! Has hundido un barco enemigo.");
+            } else if (enemyBoard[row][col] === '-') {
+                enemyBoard[row][col] = 'X';
+                updateStatus("Agua... no hay barco en esa posición.");
+            }
+            
+            isPlayerTurn = false;
+            updateShipCount();
+            drawBoards();
+            
+            // Verificar si el jugador ganó
+            if (enemyShips <= 0) {
+                updateStatus("¡Felicidades! Has ganado el juego.");
+                return;
+            }
+            
+            // Turno de la IA después de un breve retraso
+            setTimeout(aiTurn, 1000);
+        }
     }
-  }
 }
 
-function turnoIA() {
-  if (juegoTerminado) return;
-  
-  // Ataque aleatorio de la IA
-  let x, y;
-  do {
-    x = floor(random(tamañoTablero));
-    y = floor(random(tamañoTablero));
-  } while (miTablero[y][x] === 'x' || miTablero[y][x] === '!');
-  
-  if (atacar(x, y, miTablero)) {
-    misBarcos--;
-  }
-  
-  // Verificar fin del juego
-  if (misBarcos === 0 || barcosEnemigos === 0) {
-    juegoTerminado = true;
-  }
-  
-  turnoJugador = true;
-}
-
-// Funciones del juego (adaptadas para p5.js)
-function crearTablero(tamaño) {
-  let tablero = [];
-  for (let i = 0; i < tamaño; i++) {
-    tablero[i] = [];
-    for (let j = 0; j < tamaño; j++) {
-      tablero[i][j] = '-';
-    }
-  }
-  return tablero;
-}
-
-function colocarBarcosAleatorios(tablero, cantidad) {
-  for (let i = 0; i < cantidad; i++) {
+function aiTurn() {
+    // Ataque aleatorio de la IA
     let x, y;
     do {
-      x = floor(random(tablero.length));
-      y = floor(random(tablero.length));
-    } while (tablero[y][x] === 'O');
+        x = floor(random(boardSize));
+        y = floor(random(boardSize));
+    } while (playerBoard[y][x] === 'X' || playerBoard[y][x] === '!');
     
-    tablero[y][x] = 'O';
-  }
-}
-
-function atacar(x, y, tablero) {
-  if (tablero[y][x] == 'O') {
-    tablero[y][x] = '!';
-    return true;
-  } else if (tablero[y][x] == '-') {
-    tablero[y][x] = 'x';
-    return false;
-  }
-  return false;
-}
-
-function dibujarTablero(tablero, x, y, esEnemigo, titulo) {
-  push();
-  translate(x, y);
-  
-  // Dibujar título
-  fill(0);
-  textSize(16);
-  text(titulo, (tablero.length * anchoCelda)/2, -20);
-  
-  // Dibujar celdas
-  for (let fila = 0; fila < tablero.length; fila++) {
-    for (let col = 0; col < tablero.length; col++) {
-      // Dibujar celda
-      stroke(0);
-      fill(255);
-      rect(col * anchoCelda, fila * anchoCelda, anchoCelda, anchoCelda);
-      
-      // Dibujar contenido
-      let mostrar = tablero[fila][col];
-      if (esEnemigo && mostrar === 'O') mostrar = '-';
-      
-      fill(0);
-      textSize(20);
-      
-      if (mostrar === 'O') fill(0, 0, 255); // Barco (azul)
-      else if (mostrar === '!') fill(255, 0, 0); // Impacto (rojo)
-      else if (mostrar === 'x') fill(200); // Fallo (gris)
-      
-      text(mostrar, col * anchoCelda + anchoCelda/2, fila * anchoCelda + anchoCelda/2);
+    if (playerBoard[y][x] === 'O') {
+        playerBoard[y][x] = '!';
+        playerShips--;
+        updateStatus("La IA ha impactado uno de tus barcos!");
+    } else {
+        playerBoard[y][x] = 'X';
+        updateStatus("La IA ha atacado y falló. Tu turno!");
     }
-  }
-  
-  // Dibujar coordenadas
-  fill(0);
-  textSize(12);
-  for (let i = 0; i < tablero.length; i++) {
-    // Columnas (arriba)
-    text(i, i * anchoCelda + anchoCelda/2, -10);
-    // Filas (izquierda)
-    text(i, -15, i * anchoCelda + anchoCelda/2);
-  }
-  
-  pop();
+    
+    isPlayerTurn = true;
+    updateShipCount();
+    drawBoards();
+    
+    // Verificar si la IA ganó
+    if (playerShips <= 0) {
+        updateStatus("¡La IA ha ganado! Mejor suerte la próxima vez.");
+    }
+}
+
+function updateStatus(message) {
+    document.getElementById('status').textContent = message;
+}
+
+function updateShipCount() {
+    document.getElementById('ship-count').textContent = 
+        `Tus barcos: ${playerShips} | Barcos enemigos: ${enemyShips}`;
 }
