@@ -11,7 +11,6 @@ const gameConfig = {
   shipsPlaced: 0,
   remainingShips: [],
   doubleShot: false,
-  predictionTurns: 0,
   blinkEffect: {},
   lastBlinkCleanup: 0,
   inventory: []
@@ -320,7 +319,7 @@ function startPlayerTurn() {
 function tryGetItem() {
   console.log("Sorteando ítem...");
   if (Math.random() < 0.3) {
-    const items = ['radar', 'doble', 'prediccion', 'revelar'];
+    const items = ['radar', 'doble', 'revelar'];
     const item = items[Math.floor(Math.random() * items.length)];
     gameConfig.inventory.push(item);
     console.log(`Item obtenido: ${item}`);
@@ -370,96 +369,6 @@ function playSound(sound) {
 function draw() {
   cleanOldBlinks();
   drawBoards();
-
-  if (gameConfig.predictionTurns > 0) {
-    showHeatMap();
-  }
-}
-
-function showHeatMap() {
-  push();
-  translate(width/2, 0);
-  
-  const heatMap = normalizeMap(calculateHeatMap(gameConfig.enemyBoard, gameConfig.remainingShips));
-  for (let i = 0; i < gameConfig.boardSize; i++) {
-    for (let j = 0; j < gameConfig.boardSize; j++) {
-      const prob = heatMap[i][j];
-      if (prob > 0) {
-        fill(255, 0, 0, prob * 150);
-        noStroke();
-        rect(j * gameConfig.cellSize, i * gameConfig.cellSize, 
-             gameConfig.cellSize, gameConfig.cellSize);
-      }
-    }
-  }
-  
-  pop();
-}
-
-function calculateHeatMap(board, remainingShips) {
-  const size = board.length;
-  const map = Array.from({ length: size }, () => Array(size).fill(0));
-
-  if (!Array.isArray(remainingShips)) return map;
-
-  remainingShips.forEach(ship => {
-    if (!ship || typeof ship.size !== 'number') return;
-    
-    const shipSize = ship.size;
-    for (let i = 0; i < size; i++) {
-      for (let j = 0; j < size; j++) {
-        checkHorizontalPlacement(i, j, shipSize, board, map);
-        checkVerticalPlacement(i, j, shipSize, board, map);
-      }
-    }
-  });
-
-  return map;
-}
-
-function checkHorizontalPlacement(row, col, size, board, map) {
-  if (col + size > board.length) return;
-  
-  let possible = true;
-  for (let k = 0; k < size; k++) {
-    if (board[row][col + k] !== '-') {
-      possible = false;
-      break;
-    }
-  }
-  
-  if (possible) {
-    for (let k = 0; k < size; k++) {
-      map[row][col + k]++;
-    }
-  }
-}
-
-function checkVerticalPlacement(row, col, size, board, map) {
-  if (row + size > board.length) return;
-  
-  let possible = true;
-  for (let k = 0; k < size; k++) {
-    if (board[row + k][col] !== '-') {
-      possible = false;
-      break;
-    }
-  }
-  
-  if (possible) {
-    for (let k = 0; k < size; k++) {
-      map[row + k][col]++;
-    }
-  }
-}
-
-function normalizeMap(map) {
-  const values = map.flat();
-  const max = values.length > 0 ? Math.max(...values) : 1;
-  
-  return map.map(row =>
-    row.map(value => max > 0 ? value / max : 0)
-  );
 }
 
 function showMessage(text) {
@@ -482,7 +391,6 @@ function resetGame() {
 
   gameConfig.inventory = [];
   gameConfig.doubleShot = false;
-  gameConfig.predictionTurns = 0;
   updateInventoryUI();
 }
 
@@ -490,7 +398,6 @@ function getItemName(code) {
   const names = {
     'radar': 'Radar',
     'doble': 'Disparo Doble',
-    'prediccion': 'Modo de Predicción',
     'revelar': 'Revelar Posición'
   };
   return names[code] || 'Ítem';
@@ -527,7 +434,6 @@ function getItemIcon(code) {
   const icons = {
     'radar': '🔍',
     'doble': '💥',
-    'prediccion': '🔮',
     'revelar': '👁️'
   };
   return icons[code] || '❓';
@@ -537,7 +443,6 @@ function getItemDescription(code) {
   const descs = {
     'radar': 'Revela un barco enemigo',
     'doble': 'Permite disparar dos veces',
-    'prediccion': 'Muestra zonas probables de barcos',
     'revelar': 'Muestra una posición enemiga'
   };
   return descs[code] || 'Ítem misterioso';
@@ -553,11 +458,6 @@ function useItem(item) {
     case 'doble':
       gameConfig.doubleShot = true;
       updateStatus("¡Activado doble disparo!");
-      used = true;
-      break;
-    case 'prediccion':
-      gameConfig.predictionTurns = 3;
-      updateStatus("¡Modo predicción activado por 3 turnos!");
       used = true;
       break;
     case 'revelar':
