@@ -29,21 +29,38 @@ const sounds = {
   isMusicPlaying: false
 };
 
+let loadingComplete = false;
+
 function preload() {
-  sounds.background = loadSound('sonidos/musicaFondo.mp3');
-  sounds.victory = loadSound('sonidos/victoria.mp3');
-  sounds.defeat = loadSound('sonidos/derrota.mp3');
-  sounds.playerHit = loadSound('sonidos/impactoJugador.mp3');
-  sounds.enemyHit = loadSound('sonidos/impactoIA.mp3');
-  sounds.water = loadSound('sonidos/agua.mp3');
-  sounds.placeShip = loadSound('sonidos/colocarBarco.mp3');
+sounds.background = loadSound('assets/sounds/musicaFondo.mp3');
+  sounds.victory = loadSound('assets/sounds/victoria.mp3');
+  sounds.defeat = loadSound('assets/sounds/derrota.mp3');
+  sounds.playerHit = loadSound('assets/sounds/impactoJugador.mp3');
+  sounds.enemyHit = loadSound('assets/sounds/impactoIA.mp3');
+  sounds.water = loadSound('assets/sounds/agua.mp3');
+  sounds.placeShip = loadSound('assets/sounds/colocarBarco.mp3');
 }
 
 function setup() {
   createCanvas(800, 400).parent('game-container');
   textAlign(CENTER, CENTER);
   
-  setupEventListeners();
+      if (loadingComplete) {
+        initialStartup();
+    } else {
+        const loadingCheck = setInterval(() => {
+            if (loadingComplete) {
+                clearInterval(loadingCheck);
+                initialStartup();
+            }
+        }, 100);
+    }
+ 
+}
+
+function initialStartup(){
+
+ setupEventListeners();
   initializeBoards();
   drawBoards();
   
@@ -70,10 +87,9 @@ function createEmptyBoard() {
 
 function drawBoards() {
   clear();
-  background(240);
-  
+
   drawBoard(gameConfig.playerBoard, 0, 0, false);
-  drawBoard(gameConfig.enemyBoard, width/2, 0, true);
+  drawBoard(gameConfig.enemyBoard, 480, 0, true);
 }
 
 function showScreen(id) {
@@ -96,7 +112,6 @@ function drawBoard(board, x, y, isEnemy) {
     }
   }
   
-  drawCoordinates();
   pop();
 }
 
@@ -106,17 +121,12 @@ function setCellColor(content, row, col) {
     'O': '#87CEFA',
     'X': '#A9A9A9',
     'R': '#FFFF66',
-    '!': isBlinking(row, col) ? '#FF0000' : '#E64832'
+    '!': '#E64832'
   };
   
   fill(colors[content] || '#F4F4F4');
 }
 
-function isBlinking(row, col) {
-  const key = `${row},${col}`;
-  return gameConfig.blinkEffect[key] && 
-         (frameCount - gameConfig.blinkEffect[key]) % 30 < 15;
-}
 
 function drawCoordinates() {
   fill(0);
@@ -128,7 +138,7 @@ function drawCoordinates() {
 }
 
 function startQuickGame() {
-  initGame('quick', Math.floor(random(3, 6)));
+  initGame('quick', Math.floor(random(3, 6)),8);
 }
 
 function showManualConfig() {
@@ -145,19 +155,26 @@ function startManualPlacement() {
     alert("Por favor elige entre 3 y 10 barcos");
     return;
   }
-  
-  initGame('manual', ships);
+
+  const boardSize = parseInt(document.getElementById('grid-size').value);
+    if (boardSize < 5 || boardSize > 15) {
+        alert("El tamaño del tablero debe estar entre 5 y 15");
+        return;
+    }
+
+  initGame('manual', ships, boardSize);
   gameConfig.placingShips = true;
   gameConfig.shipsPlaced = 0;
   document.getElementById('manual-placement').style.display = 'none';
   updateStatus(`Coloca tus ${ships} barcos. Haz clic en tu tablero.`);
 }
 
-function initGame(mode, shipCount) {
+function initGame(mode, shipCount, boardSize) {
   gameConfig.gameMode = mode;
   initializeBoards();
   
   gameConfig.playerShips = shipCount;
+  gameConfig.boardSize = boardSize;
   gameConfig.enemyShips = shipCount;
   
   placeRandomShips(gameConfig.playerBoard, gameConfig.playerShips);
@@ -193,18 +210,6 @@ function markHit(row, col) {
   gameConfig.blinkEffect[`${row},${col}`] = frameCount;
 }
 
-function cleanOldBlinks() {
-  const now = frameCount;
-  if (now - gameConfig.lastBlinkCleanup > 300) {
-    gameConfig.lastBlinkCleanup = now;
-    for (const key in gameConfig.blinkEffect) {
-      if (now - gameConfig.blinkEffect[key] > 120) {
-        delete gameConfig.blinkEffect[key];
-      }
-    }
-  }
-}
-
 function mousePressed() {
   if (!gameConfig.gameMode) return;
   
@@ -218,13 +223,13 @@ function mousePressed() {
     return;
   }
   
-  if (gameConfig.isPlayerTurn && canvasX > width/2) {
+  if (gameConfig.isPlayerTurn && canvasX > 480) {
     handlePlayerAttack(canvasX, canvasY);
   }
 }
 
 function handleShipPlacement(canvasX, canvasY) {
-  if (canvasX < width/2) {
+  if (canvasX < 480) {
     const col = floor(canvasX / gameConfig.cellSize);
     const row = floor(canvasY / gameConfig.cellSize);
     
@@ -248,7 +253,7 @@ function handleShipPlacement(canvasX, canvasY) {
 }
 
 function handlePlayerAttack(canvasX, canvasY) {
-  const col = floor((canvasX - width/2) / gameConfig.cellSize);
+  const col = floor((canvasX - 480) / gameConfig.cellSize);
   const row = floor(canvasY / gameConfig.cellSize);
   
   if (!isValidCell(row, col)) return;

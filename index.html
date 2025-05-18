@@ -3,62 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>   
     <title>Batalla Naval</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
 </head>
+
 <body>
     <div class="game-wrapper">
-        <div id="pantalla-inicio" class="pantalla">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="pantalla">
+            <div class="loading-content">
+                <h2>Cargando juego...</h2>
+                <div class="progress-bar">
+                    <div id="loading-progress" class="progress"></div>
+                </div>
+                <p id="loading-text">Preparando tableros...</p>
+            </div>
+        </div>
+
+        <!-- Main Menu Screen -->
+        <div id="pantalla-inicio" class="pantalla oculto">
             <div class="game-header">
-                <h1>🚢 Batalla Naval</h1>
+                <h1>Batalla Naval</h1>
             </div>
             <div class="game-menu">
-                <button id="btn-rapido" class="game-button">⚡ Modo rápido</button>
-                <button id="btn-manual" class="game-button">✏️ Modo manual</button>
-                <div id="manual-placement" class="pantalla oculto config-panel">
-                    <label for="ship-amount">Número de barcos (3-10):</label>
-                    <input id="ship-amount" type="number" min="3" max="10" value="5">
-                    <button id="btn-start-manual" class="game-button">🚀 Comenzar</button>
+                <button id="btn-rapido" class="game-button">Modo rápido</button>
+                <button id="btn-manual" class="game-button">Modo manual</button>
+            </div>
+
+            <!-- Manual Configuration Panel -->
+            <div id="manual-placement" class="config-panel oculto">
+                <h3>Configuración Manual</h3>
+                <div class="config-option">
+                    <label class="config-label" for="grid-size">Tamaño del tablero (5-15):</label>
+                    <input class="config-input" type="number" id="grid-size" min="5" max="15" value="8">
                 </div>
+                <div class="config-option">
+                    <label class="config-label" for="ship-amount">Número de barcos:</label>
+                    <input class="config-input" type="number" id="ship-amount" min="3" max="15" value="5">
+                </div>
+                <button id="btn-start-manual" class="game-button">Comenzar colocación</button>
             </div>
-        </div>
-
-        <div id="pantalla-juego" class="pantalla oculto">
-            <div class="game-header">
-                <h2>⚔️ Batalla Naval</h2>
-                <div id="status" class="game-status">Preparando juego...</div>
-                <div id="ship-count" class="ship-counter">Tus barcos: 0 | Enemigos: 0</div>
-            </div>
-            <div id="game-container" class="game-board-container"></div>
-            <div id="inventario-container" class="inventory-panel">
-                <h3>🎒 Inventario</h3>
-                <div id="inventario-items" class="inventory-items"></div>
-            </div>
-        </div>
-
-        <div id="pantalla-victoria" class="pantalla oculto end-screen">
-            <h2>🎉 ¡Victoria! 🎉</h2>
-            <p>Has hundido toda la flota enemiga</p>
-            <img src="assets/images/victory.png" alt="Victoria" class="end-image">
-            <button onclick="BatallaNaval.resetGame()" class="game-button">🔄 Nuevo juego</button>
-        </div>
-
-        <div id="pantalla-derrota" class="pantalla oculto end-screen">
-            <h2>💀 ¡Derrota! 💀</h2>
-            <p>La IA ha hundido todos tus barcos</p>
-            <img src="assets/images/defeat.png" alt="Derrota" class="end-image">
-            <button onclick="BatallaNaval.resetGame()" class="game-button">🔄 Nuevo juego</button>
         </div>
     </div>
 
-    <script src="js/sound.js"></script>
-    <script src="js/items.js"></script>
-    <script src="js/board.js"></script>
-    <script src="js/ai.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/game.js"></script>
-    <script src="js/main.js"></script>
+        <!-- Game Screen -->
+        <div id="pantalla-juego" class="pantalla oculto">
+            <div class="game-header">
+                <h2>Batalla Naval</h2>
+            </div>
+            <div id="status" class="game-status">Esperando...</div>
+            <div id="ship-count" class="ship-counter"></div>
+            <div id="game-container" class="game-board-container"></div>
+            
+            <div id="inventario" class="inventory-panel">
+                <h3>Tus ítems</h3>
+                <div id="items-disponibles" class="inventory-items"></div>
+            </div>
+        </div>
+
+        <!-- Victory Screen -->
+        <div id="pantalla-victoria" class="pantalla oculto end-screen">
+            <h2>¡Felicidades! Has ganado el juego.</h2>
+            <img src="crown.png" alt="Victoria" class="end-image">
+            <button onclick="reiniciarJuego()" class="game-button">Nuevo juego</button>
+        </div>
+
+        <!-- Defeat Screen -->
+        <div id="pantalla-derrota" class="pantalla oculto end-screen">
+            <h2>¡La IA ha ganado! Mejor suerte la próxima vez.</h2>
+            <img src="angry-cat.gif" alt="Derrota" class="end-image">
+            <button onclick="reiniciarJuego()" class="game-button">Nuevo juego</button>
+        </div>
+    </div>
+
+    <script src="js/juego.js"></script>
 </body>
 </html>
