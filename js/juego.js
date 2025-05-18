@@ -30,42 +30,80 @@ const sounds = {
 };
 
 let loadingComplete = false;
-
+let assetsLoaded = 0;
+let totalAssets = 7;
 function preload() {
-sounds.background = loadSound('assets/sounds/musicaFondo.mp3');
-  sounds.victory = loadSound('assets/sounds/victoria.mp3');
-  sounds.defeat = loadSound('assets/sounds/derrota.mp3');
-  sounds.playerHit = loadSound('assets/sounds/impactoJugador.mp3');
-  sounds.enemyHit = loadSound('assets/sounds/impactoIA.mp3');
-  sounds.water = loadSound('assets/sounds/agua.mp3');
-  sounds.placeShip = loadSound('assets/sounds/colocarBarco.mp3');
+  document.getElementById('loading-text').textContent = "Cargando sonidos...";
+  
+  // Load each sound with progress tracking
+  sounds.background = loadSound('assets/sounds/musicaFondo.mp3', () => updateProgress(1), loadingError);
+  sounds.victory = loadSound('assets/sounds/victoria.mp3', () => updateProgress(2), loadingError);
+  sounds.defeat = loadSound('assets/sounds/derrota.mp3', () => updateProgress(3), loadingError);
+  sounds.playerHit = loadSound('assets/sounds/impactoJugador.mp3', () => updateProgress(4), loadingError);
+  sounds.enemyHit = loadSound('assets/sounds/impactoIA.mp3', () => updateProgress(5), loadingError);
+  sounds.water = loadSound('assets/sounds/agua.mp3', () => updateProgress(6), loadingError);
+  sounds.placeShip = loadSound('assets/sounds/colocarBarco.mp3', () => updateProgress(7), loadingError);
 }
 
+function updateProgress(assetNumber) {
+    assetsLoaded++;
+  document.getElementById('loading-progress').style.width = `${(assetsLoaded/totalAssets)*100}%`;
+  //document.getElementById('loading-text').textContent = 
+    //`Cargando... (${assetsLoaded}/${totalAssets}) ${assetNames[assetNumber-1]}`;
+  
+  if (assetsLoaded === totalAssets) {
+    document.getElementById('loading-text').textContent = "¡Juego listo!";
+    setTimeout(() => {
+      document.getElementById('loading-screen').style.display = 'none';
+      // Directly initialize what we need here
+      userStartAudio(); // Activate audio system
+      showScreen('pantalla-inicio'); // Show main menu
+    }, 500);
+  }
+}
+
+function loadingError(err) {
+  console.error("Error loading sound:", err);
+  assetsLoaded++; // Count failed assets too
+  updateProgress(0); // Update progress without specific asset name
+}
+
+// Remove board initialization from setup()
 function setup() {
+  // Essential p5.js setup (must run immediately)
   createCanvas(800, 400).parent('game-container');
   textAlign(CENTER, CENTER);
+  frameRate(30);
   
+  // Setup event listeners (can run immediately)
+  setupEventListeners();
+  
+  // Handle both loading scenarios:
+  if (loadingComplete) {
+    // Assets already loaded - start audio and show menu
+    userStartAudio();
+    showScreen('pantalla-inicio');
+  } else {
+    // Assets still loading - set up polling
+    const loadingCheck = setInterval(() => {
       if (loadingComplete) {
-        initialStartup();
-    } else {
-        const loadingCheck = setInterval(() => {
-            if (loadingComplete) {
-                clearInterval(loadingCheck);
-                initialStartup();
-            }
-        }, 100);
-    }
- 
+        clearInterval(loadingCheck);
+        userStartAudio();
+        showScreen('pantalla-inicio');
+      }
+    }, 100);
+  }
 }
 
-function initialStartup(){
-
- setupEventListeners();
-  initializeBoards();
-  drawBoards();
-  
-  userStartAudio();
-  frameRate(30);
+// Modified initializeBoards to only create when needed
+function initializeBoards() {
+  // Only create if we have a valid size
+  if (gameConfig.boardSize > 0) {
+    gameConfig.playerBoard = createEmptyBoard(gameConfig.boardSize);
+    gameConfig.enemyBoard = createEmptyBoard(gameConfig.boardSize);
+    return true;
+  }
+  return false;
 }
 
 function setupEventListeners() {
@@ -74,45 +112,67 @@ function setupEventListeners() {
   document.getElementById('btn-start-manual').addEventListener('click', startManualPlacement);
 }
 
-function initializeBoards() {
-  gameConfig.playerBoard = createEmptyBoard();
-  gameConfig.enemyBoard = createEmptyBoard();
+function createEmptyBoard(size) {
+  return Array.from({length: size}, () => 
+    Array(size).fill('-')
+  );
 }
 
-function createEmptyBoard() {
-  return Array(gameConfig.boardSize).fill().map(() => 
-    Array(gameConfig.boardSize).fill('-')
-  );
+// Essential drawing function (must be kept)
+function drawBoard(board, x, y, isEnemy) {
+  push();
+  translate(x, y);
+  
+  // Calculate cell size based on current board size
+  const cellSize = (width / 2) / gameConfig.boardSize;
+  
+  // Draw cells
+  for (let i = 0; i < gameConfig.boardSize; i++) {
+    for (let j = 0; j < gameConfig.boardSize; j++) {
+      // Determine cell content (hide enemy ships if needed)
+      let content = isEnemy && board[i][j] === 'O' ? '-' : board[i][j];
+      
+      // Set color based on content
+      if (content === '-') fill('#F4F4F4');     // Water
+      else if (content === 'O') fill('#87CEFA'); // Ship
+      else if (content === 'X') fill('#A9A9A9'); // Miss
+      else if (content === '!') fill('#E64832'); // Hit
+      else if (content === 'R') fill('#FFFF66'); // Revealed
+      
+      // Draw cell
+      stroke(0);
+      rect(j * cellSize, i * cellSize, cellSize, cellSize);
+    }
+  }
+  
+  // Draw coordinates
+  //fill(0);
+  //textSize(12);
+  //for (let i = 0; i < gameConfig.boardSize; i++) {
+    //text(i, i * cellSize + cellSize/2, -10);  // Column labels
+    //text(i, -15, i * cellSize + cellSize/2);  // Row labels
+  //}
+  
+  pop();
 }
 
 function drawBoards() {
   clear();
-
-  drawBoard(gameConfig.playerBoard, 0, 0, false);
-  drawBoard(gameConfig.enemyBoard, 480, 0, true);
+  background(240);
+  
+  if (gameConfig.playerBoard && gameConfig.enemyBoard) {
+    drawBoard(gameConfig.playerBoard, 0, 0, false);          // Player board (left)
+    drawBoard(gameConfig.enemyBoard, width/2, 0, true);     // Enemy board (right)
+  } else {
+    // Show waiting message if boards not created yet
+    fill(0);
+    text("Selecciona un modo de juego", width/2, height/2);
+  }
 }
 
 function showScreen(id) {
   document.querySelectorAll('.pantalla').forEach(div => div.classList.add('oculto'));
   document.getElementById(id).classList.remove('oculto');
-}
-
-function drawBoard(board, x, y, isEnemy) {
-  push();
-  translate(x, y);
-  
-  for (let i = 0; i < gameConfig.boardSize; i++) {
-    for (let j = 0; j < gameConfig.boardSize; j++) {
-      let content = isEnemy && board[i][j] === 'O' ? '-' : board[i][j];
-      setCellColor(content, i, j);
-      
-      stroke(0);
-      rect(j * gameConfig.cellSize, i * gameConfig.cellSize, 
-           gameConfig.cellSize, gameConfig.cellSize);
-    }
-  }
-  
-  pop();
 }
 
 function setCellColor(content, row, col) {
@@ -138,7 +198,10 @@ function drawCoordinates() {
 }
 
 function startQuickGame() {
-  initGame('quick', Math.floor(random(3, 6)),8);
+  gameConfig.boardSize = 8; // Default size for quick game
+  if (initializeBoards()) {
+    initGame('quick', Math.floor(random(3, 6)));
+  }
 }
 
 function showManualConfig() {
@@ -151,30 +214,23 @@ function showManualConfig() {
 
 function startManualPlacement() {
   const ships = parseInt(document.getElementById('ship-amount').value);
-  if (ships < 3 || ships > 10) {
-    alert("Por favor elige entre 3 y 10 barcos");
-    return;
-  }
-
   const boardSize = parseInt(document.getElementById('grid-size').value);
-    if (boardSize < 5 || boardSize > 15) {
-        alert("El tamaño del tablero debe estar entre 5 y 15");
-        return;
+  
+  if (ships >= 3 && ships <= 15 && boardSize >= 5 && boardSize <= 15) {
+    gameConfig.boardSize = boardSize;
+    if (initializeBoards()) {
+      initGame('manual', ships);
     }
-
-  initGame('manual', ships, boardSize);
-  gameConfig.placingShips = true;
-  gameConfig.shipsPlaced = 0;
-  document.getElementById('manual-placement').style.display = 'none';
-  updateStatus(`Coloca tus ${ships} barcos. Haz clic en tu tablero.`);
+  } else {
+    alert("Configuración inválida");
+  }
 }
 
-function initGame(mode, shipCount, boardSize) {
+
+// Simplify initGame since boards are now created earlier
+function initGame(mode, shipCount) {
   gameConfig.gameMode = mode;
-  initializeBoards();
-  
   gameConfig.playerShips = shipCount;
-  gameConfig.boardSize = boardSize;
   gameConfig.enemyShips = shipCount;
   
   placeRandomShips(gameConfig.playerBoard, gameConfig.playerShips);
@@ -600,9 +656,25 @@ function useItem(item) {
   }
 }
 
+function cleanOldBlinks() {
+  // Clean up blink effects older than 1 second (30 frames at 30fps)
+  const currentFrame = frameCount;
+  const framesToKeep = 30;
+  
+  if (currentFrame - gameConfig.lastBlinkCleanup > framesToKeep) {
+    for (const key in gameConfig.blinkEffect) {
+      if (currentFrame - gameConfig.blinkEffect[key] > framesToKeep) {
+        delete gameConfig.blinkEffect[key];
+      }
+    }
+    gameConfig.lastBlinkCleanup = currentFrame;
+  }
+}
+
 function revealRandomShip() {
   const hiddenShips = [];
   
+  // Find all hidden enemy ships
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
       if (gameConfig.enemyBoard[i][j] === 'O') {
@@ -612,21 +684,24 @@ function revealRandomShip() {
   }
   
   if (hiddenShips.length > 0) {
+    // Select random ship to reveal
     const ship = hiddenShips[floor(random(hiddenShips.length))];
-    gameConfig.enemyBoard[ship.row][ship.col] = 'R';
+    gameConfig.enemyBoard[ship.row][ship.col] = 'R'; // Mark as revealed
     
+    // Update UI and return success
     updateStatus("¡Radar activado! Se ha revelado un barco enemigo.");
     drawBoards();
     return true;
   }
   
-  updateStatus("No hay barcos enemigos para revelar.");
+  updateStatus("No hay barcos enemigos ocultos para revelar.");
   return false;
 }
 
 function revealRandomPosition() {
   const emptyCells = [];
   
+  // Find all unrevealed empty cells
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
       if (gameConfig.enemyBoard[i][j] === '-') {
@@ -636,14 +711,16 @@ function revealRandomPosition() {
   }
   
   if (emptyCells.length > 0) {
+    // Select random empty cell to reveal
     const cell = emptyCells[floor(random(emptyCells.length))];
-    gameConfig.enemyBoard[cell.row][cell.col] = 'X';
+    gameConfig.enemyBoard[cell.row][cell.col] = 'X'; // Mark as water
     
+    // Update UI and return success
     updateStatus("¡Posición revelada! Se ha marcado como agua.");
     drawBoards();
     return true;
   }
   
-  updateStatus("No hay celdas para revelar.");
+  updateStatus("No hay celdas sin revelar.");
   return false;
 }
