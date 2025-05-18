@@ -70,10 +70,9 @@ function createEmptyBoard() {
 
 function drawBoards() {
   clear();
-  background(240);
-  
+
   drawBoard(gameConfig.playerBoard, 0, 0, false);
-  drawBoard(gameConfig.enemyBoard, width/2, 0, true);
+  drawBoard(gameConfig.enemyBoard, 480, 0, true);
 }
 
 function showScreen(id) {
@@ -96,7 +95,6 @@ function drawBoard(board, x, y, isEnemy) {
     }
   }
   
-  drawCoordinates();
   pop();
 }
 
@@ -106,17 +104,12 @@ function setCellColor(content, row, col) {
     'O': '#87CEFA',
     'X': '#A9A9A9',
     'R': '#FFFF66',
-    '!': isBlinking(row, col) ? '#FF0000' : '#E64832'
+    '!': '#E64832'
   };
   
   fill(colors[content] || '#F4F4F4');
 }
 
-function isBlinking(row, col) {
-  const key = `${row},${col}`;
-  return gameConfig.blinkEffect[key] && 
-         (frameCount - gameConfig.blinkEffect[key]) % 30 < 15;
-}
 
 function drawCoordinates() {
   fill(0);
@@ -193,18 +186,6 @@ function markHit(row, col) {
   gameConfig.blinkEffect[`${row},${col}`] = frameCount;
 }
 
-function cleanOldBlinks() {
-  const now = frameCount;
-  if (now - gameConfig.lastBlinkCleanup > 300) {
-    gameConfig.lastBlinkCleanup = now;
-    for (const key in gameConfig.blinkEffect) {
-      if (now - gameConfig.blinkEffect[key] > 120) {
-        delete gameConfig.blinkEffect[key];
-      }
-    }
-  }
-}
-
 function mousePressed() {
   if (!gameConfig.gameMode) return;
   
@@ -218,13 +199,13 @@ function mousePressed() {
     return;
   }
   
-  if (gameConfig.isPlayerTurn && canvasX > width/2) {
+  if (gameConfig.isPlayerTurn && canvasX > 480) {
     handlePlayerAttack(canvasX, canvasY);
   }
 }
 
 function handleShipPlacement(canvasX, canvasY) {
-  if (canvasX < width/2) {
+  if (canvasX < 480) {
     const col = floor(canvasX / gameConfig.cellSize);
     const row = floor(canvasY / gameConfig.cellSize);
     
@@ -248,7 +229,7 @@ function handleShipPlacement(canvasX, canvasY) {
 }
 
 function handlePlayerAttack(canvasX, canvasY) {
-  const col = floor((canvasX - width/2) / gameConfig.cellSize);
+  const col = floor((canvasX - 480) / gameConfig.cellSize);
   const row = floor(canvasY / gameConfig.cellSize);
   
   if (!isValidCell(row, col)) return;
