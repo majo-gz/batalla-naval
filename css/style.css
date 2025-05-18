@@ -21,6 +21,7 @@ body {
 
 .game-header {
     margin-bottom: 20px;
+    text-align: center;
 }
 
 .game-menu {
@@ -57,13 +58,13 @@ body {
 .game-status {
     font-size: 18px;
     margin: 10px 0;
-    color: #f1c40f;
+    color: #fff;
 }
 
 .ship-counter {
     font-size: 16px;
     margin-bottom: 15px;
-    color: #2ecc71;
+    color: #ffff;
 }
 
 .game-board-container {

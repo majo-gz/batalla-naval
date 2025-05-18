@@ -600,26 +600,16 @@ function revealRandomShip() {
   return false;
 }
 
-function revealRandomPosition() {
-  const emptyCells = [];
-  
+function useRadar() {
+  let revelados = 0;
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
-      if (gameConfig.enemyBoard[i][j] === '-') {
-        emptyCells.push({row: i, col: j});
+      if (gameConfig.enemyBoard[i][j] === 'O' && random() > 0.7) { // 30% de chance por celda
+        gameConfig.enemyBoard[i][j] = 'R';
+        markHit(i, j);
+        revelados++;
       }
     }
   }
-  
-  if (emptyCells.length > 0) {
-    const cell = emptyCells[floor(random(emptyCells.length))];
-    gameConfig.enemyBoard[cell.row][cell.col] = 'X';
-    
-    updateStatus("¡Posición revelada! Se ha marcado como agua.");
-    drawBoards();
-    return true;
-  }
-  
-  updateStatus("No hay celdas para revelar.");
-  return false;
+  updateStatus(revelados > 0 ? `Radar reveló ${revelados} barcos!` : "No se encontraron barcos");
 }
