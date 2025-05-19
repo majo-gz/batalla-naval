@@ -376,12 +376,32 @@ function startPlayerTurn() {
 
 function tryGetItem() {
   console.log("Sorteando ítem...");
-  if (Math.random() < 0.3) {
-    const items = ['radar', 'doble', 'revelar'];
-    const item = items[Math.floor(Math.random() * items.length)];
-    gameConfig.inventory.push(item);
-    console.log(`Item obtenido: ${item}`);
-    showMessage(`¡Has obtenido un ítem: ${getItemName(item)}!`);
+  if (Math.random() < 0.3) { // 30% de chance de obtener un ítem
+    // Definir probabilidades (puedes ajustar estos valores)
+    const itemRarities = {
+      'doble': 5,    // 50% - Común
+      'radar': 30,     // 30% - Poco común
+      'revelar': 15,   // 15% - Raro
+      'defensa': 50     // 5%  - Muy raro
+    };
+
+    // Calcular total para normalización
+    const total = Object.values(itemRarities).reduce((sum, val) => sum + val, 0);
+    let random = Math.random() * total;
+    
+    // Seleccionar ítem basado en peso
+    let selectedItem;
+    for (const [item, weight] of Object.entries(itemRarities)) {
+      if (random < weight) {
+        selectedItem = item;
+        break;
+      }
+      random -= weight;
+    }
+
+    gameConfig.inventory.push(selectedItem);
+    console.log(`Item obtenido: ${selectedItem} (Rareza: ${itemRarities[selectedItem]}%)`);
+    showMessage(`¡Has obtenido un ítem: ${getItemName(selectedItem)}!`);
     updateInventoryUI();
   }
 }
@@ -523,7 +543,7 @@ function useItem(item) {
       used = true;
       break;
     case 'revelar':
-      used = revealRandomPosition();
+      used = revealRandomPositions();
       break;
     case 'defensa':
       used = protectRandomCells();
@@ -576,13 +596,13 @@ function revealRandomShip() {
   return false;
 }
 
-function revealRandomPosition() {
+function revealRandomPositions() {
   // Encontrar celdas no reveladas en el tablero enemigo
   const hiddenCells = [];
   
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
-      // Solo considerar celdas que no han sido atacadas y no son barcos ya revelados
+      // Solo considerar celdas que no han sido atacadas/reveladas y no son barcos ya revelados
       if (gameConfig.enemyBoard[i][j] === '-' || gameConfig.enemyBoard[i][j] === 'O') {
         hiddenCells.push({row: i, col: j});
       }
@@ -593,20 +613,33 @@ function revealRandomPosition() {
     updateStatus("No hay posiciones para revelar");
     return false;
   }
-  
-  // Seleccionar una celda aleatoria
-  const randomCell = hiddenCells[Math.floor(Math.random() * hiddenCells.length)];
-  
-  // Revelar la posición (mostrar si hay barco o no)
-  if (gameConfig.enemyBoard[randomCell.row][randomCell.col] === 'O') {
-    gameConfig.enemyBoard[randomCell.row][randomCell.col] = 'R'; // Barco revelado
-    updateStatus("¡Revelación muestra un barco enemigo!");
-  } else {
-    gameConfig.enemyBoard[randomCell.row][randomCell.col] = 'X'; // Agua revelada
-    updateStatus("Revelación muestra agua - no hay barco aquí");
+
+  // Revelar 2 celdas (o menos si no hay suficientes)
+  const cellsToReveal = Math.min(2, hiddenCells.length);
+  let revealedShips = 0;
+
+  for (let i = 0; i < cellsToReveal; i++) {
+    // Seleccionar una celda aleatoria y removerla del array para no repetir
+    const randomIndex = Math.floor(Math.random() * hiddenCells.length);
+    const cell = hiddenCells.splice(randomIndex, 1)[0];
+    
+    // Revelar la posición
+    if (gameConfig.enemyBoard[cell.row][cell.col] === 'O') {
+      gameConfig.enemyBoard[cell.row][cell.col] = 'R'; // Barco revelado
+      revealedShips++;
+      markHit(cell.row, cell.col); // Efecto visual para barcos
+    } else {
+      gameConfig.enemyBoard[cell.row][cell.col] = 'X'; // Agua revelada
+    }
   }
-  
-  markHit(randomCell.row, randomCell.col); // Efecto visual
+
+  // Mensaje descriptivo
+  if (revealedShips > 0) {
+    updateStatus(`¡Revelación muestra ${revealedShips} barco(s) enemigo(s)!`);
+  } else {
+    updateStatus("Revelación muestra agua - no hay barcos en estas posiciones");
+  }
+
   drawBoards();
   return true;
 }
