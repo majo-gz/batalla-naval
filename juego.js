@@ -208,9 +208,11 @@ function startManualPlacement() {
     return;
   }
   
-  initGame('manual', ships);
+  
   gameConfig.placingShips = true;
   gameConfig.shipsPlaced = 0;
+  gameConfig.shipsToPlace = ships;
+  initGame('manual', ships);
   document.getElementById('manual-placement').style.display = 'none';
   updateStatus(`Coloca tus ${ships} barcos. Haz clic en tu tablero.`);
 }
@@ -222,7 +224,7 @@ function initGame(mode, shipCount) {
   gameConfig.playerShips = shipCount;
   gameConfig.enemyShips = shipCount;
   
-  placeRandomShips(gameConfig.playerBoard, gameConfig.playerShips);
+  if (gameConfig.gameMode !== 'manual') {placeRandomShips(gameConfig.playerBoard, gameConfig.playerShips);} 
   placeRandomShips(gameConfig.enemyBoard, gameConfig.enemyShips);
   
   initRemainingShips(gameConfig.enemyShips);
