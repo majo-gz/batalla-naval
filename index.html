@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batalla Naval</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
 </head>
@@ -45,6 +45,22 @@
             <p>Has hundido toda la flota enemiga</p>
             <img src="assets/images/victory.png" alt="Victoria" class="end-image">
             <button onclick="BatallaNaval.resetGame()" class="game-button">🔄 Nuevo juego</button>
+            <button id="btn-stats-end" class="game-button">📊 Ver estadísticas</button>
+            <div id="stats-panel" class="stats-panel oculto">
+            <h3>📊 Estadísticas de la Partida</h3>
+            <div class="stat-item">
+                <span>Disparos realizados:</span>
+                <span id="stats-shots">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Precisión:</span>
+                <span id="stats-accuracy">0%</span>
+            </div>
+            <div class="stat-item">
+                <span>Barcos hundidos:</span>
+                <span id="stats-sunk">0</span>
+            </div>
+</div>
         </div>
 
         <div id="pantalla-derrota" class="pantalla oculto end-screen">
@@ -52,7 +68,23 @@
             <p>La IA ha hundido todos tus barcos</p>
             <img src="assets/images/defeat.png" alt="Derrota" class="end-image">
             <button onclick="BatallaNaval.resetGame()" class="game-button">🔄 Nuevo juego</button>
-        </div>
+            <button id="btn-stats-end" class="game-button">📊 Ver estadísticas</button>
+            
+            <div id="stats-panel" class="stats-panel oculto">
+            <h3>📊 Estadísticas de la Partida</h3>
+            <div class="stat-item">
+                <span>Disparos realizados:</span>
+                <span id="stats-shots">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Precisión:</span>
+                <span id="stats-accuracy">0%</span>
+            </div>
+            <div class="stat-item">
+                <span>Barcos hundidos:</span>
+                <span id="stats-sunk">0</span>
+            </div>
+    </div>
     </div>
 
 <script src="juego.js"></script>
