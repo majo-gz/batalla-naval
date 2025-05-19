@@ -13,7 +13,8 @@ const gameConfig = {
   doubleShot: false,
   blinkEffect: {},
   lastBlinkCleanup: 0,
-  inventory: []
+  inventory: [],
+   protectedCells: []
 };
 
 // Efectos de sonido
@@ -86,9 +87,38 @@ function drawBoard(board, x, y, isEnemy) {
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
       let content = isEnemy && board[i][j] === 'O' ? '-' : board[i][j];
+      
+      // 1. Handle blink effect first (this affects the cell content)
+// Handle blink effect for this cell (verde)
+const blinkKey = `${i},${j}`;
+if (gameConfig.blinkEffect[blinkKey]) {
+  const framesSinceHit = frameCount - gameConfig.blinkEffect[blinkKey];
+  if (framesSinceHit < 10) { // Blink for 10 frames
+    // Efecto de parpadeo verde
+    const pulse = floor(framesSinceHit / 2) % 2;
+    if (pulse === 0) {
+      content = 'B'; // Usamos 'B' para blink verde
+    }
+  }
+}
+      
+      // 2. Set base cell color
       setCellColor(content, i, j);
       
-      stroke(0);
+      // 3. Handle protected cell borders (drawn on top of base cell)
+      const isProtected = !isEnemy && gameConfig.protectedCells.some(
+        cell => cell.row === i && cell.col === j
+      );
+      
+      if (isProtected) {
+        stroke(0, 255, 0); // Green border for protected cells
+        strokeWeight(2);
+      } else {
+        stroke(0); // Normal black border
+        strokeWeight(1);
+      }
+      
+      // 4. Draw the cell rectangle
       rect(j * gameConfig.cellSize, i * gameConfig.cellSize, 
            gameConfig.cellSize, gameConfig.cellSize);
     }
@@ -99,16 +129,17 @@ function drawBoard(board, x, y, isEnemy) {
 
 function setCellColor(content, row, col) {
   const colors = {
-    '-': '#F4F4F4',
-    'O': '#87CEFA',
-    'X': '#A9A9A9',
-    'R': '#FFFF66',
-    '!': '#E64832'
+    '-': '#F4F4F4',  // Empty
+    'O': '#87CEFA',  // Ship
+    'X': '#A9A9A9',  // Miss
+    'R': '#FFFF66',  // Revealed
+    '!': '#E64832',  // Hit
+    'P': '#90EE90',   // Protected (light green),
+    'B': '#00FF00'   // Blink verde (verde puro)
   };
   
   fill(colors[content] || '#F4F4F4');
 }
-
 
 function drawCoordinates() {
   fill(0);
@@ -270,13 +301,40 @@ function isValidCell(row, col) {
 }
 
 function aiTurn() {
-  let x, y;
+  let x, y, attempts = 0;
+  const maxAttempts = 50; // Para evitar bucles infinitos
+  
   do {
     x = floor(random(gameConfig.boardSize));
     y = floor(random(gameConfig.boardSize));
-  } while (['X', '!'].includes(gameConfig.playerBoard[y][x]));
+    attempts++;
+    
+    // Verificar si la celda está protegida
+    const isProtected = gameConfig.protectedCells.some(
+      cell => cell.row === y && cell.col === x
+    );
+    
+    if (attempts >= maxAttempts) {
+      // Si no encuentra celda no protegida después de muchos intentos, atacar igual
+      break;
+    }
+    
+  } while (
+    (['X', '!'].includes(gameConfig.playerBoard[y][x]) || 
+    gameConfig.protectedCells.some(cell => cell.row === y && cell.col === x)
+  ))
   
-  if (gameConfig.playerBoard[y][x] === 'O') {
+  // Verificar si el ataque fue bloqueado
+  const isProtected = gameConfig.protectedCells.some(
+    cell => cell.row === y && cell.col === x
+  );
+  
+  if (isProtected) {
+    updateStatus("¡Defensa electrónica ha bloqueado un ataque enemigo!");
+    gameConfig.playerBoard[y][x] = 'X'; // Marcar como ataque fallido
+    playSound(sounds.water);
+  } 
+  else if (gameConfig.playerBoard[y][x] === 'O') {
     gameConfig.playerBoard[y][x] = '!';
     markHit(y, x);
     gameConfig.playerShips--;
@@ -318,12 +376,32 @@ function startPlayerTurn() {
 
 function tryGetItem() {
   console.log("Sorteando ítem...");
-  if (Math.random() < 0.3) {
-    const items = ['radar', 'doble', 'revelar'];
-    const item = items[Math.floor(Math.random() * items.length)];
-    gameConfig.inventory.push(item);
-    console.log(`Item obtenido: ${item}`);
-    showMessage(`¡Has obtenido un ítem: ${getItemName(item)}!`);
+  if (Math.random() < 0.3) { // 30% de chance de obtener un ítem
+    // Definir probabilidades (puedes ajustar estos valores)
+    const itemRarities = {
+      'doble': 5,    // 50% - Común
+      'radar': 30,     // 30% - Poco común
+      'revelar': 15,   // 15% - Raro
+      'defensa': 50     // 5%  - Muy raro
+    };
+
+    // Calcular total para normalización
+    const total = Object.values(itemRarities).reduce((sum, val) => sum + val, 0);
+    let random = Math.random() * total;
+    
+    // Seleccionar ítem basado en peso
+    let selectedItem;
+    for (const [item, weight] of Object.entries(itemRarities)) {
+      if (random < weight) {
+        selectedItem = item;
+        break;
+      }
+      random -= weight;
+    }
+
+    gameConfig.inventory.push(selectedItem);
+    console.log(`Item obtenido: ${selectedItem} (Rareza: ${itemRarities[selectedItem]}%)`);
+    showMessage(`¡Has obtenido un ítem: ${getItemName(selectedItem)}!`);
     updateInventoryUI();
   }
 }
@@ -391,6 +469,7 @@ function resetGame() {
 
   gameConfig.inventory = [];
   gameConfig.doubleShot = false;
+  gameConfig.protectedCells = []; // Limpiar celdas protegidas
   updateInventoryUI();
 }
 
@@ -398,7 +477,8 @@ function getItemName(code) {
   const names = {
     'radar': 'Radar',
     'doble': 'Disparo Doble',
-    'revelar': 'Revelar Posición'
+    'revelar': 'Revelar Posición',
+    'defensa': 'Defensa Electrónica' // Nuevo nombre
   };
   return names[code] || 'Ítem';
 }
@@ -434,7 +514,8 @@ function getItemIcon(code) {
   const icons = {
     'radar': '🔍',
     'doble': '💥',
-    'revelar': '👁️'
+    'revelar': '👁️',
+    'defensa': '🛡️' // Nuevo icono
   };
   return icons[code] || '❓';
 }
@@ -443,7 +524,8 @@ function getItemDescription(code) {
   const descs = {
     'radar': 'Revela un barco enemigo',
     'doble': 'Permite disparar dos veces',
-    'revelar': 'Muestra una posición enemiga'
+    'revelar': 'Muestra una posición enemiga',
+    'defensa': 'Protege 2 celdas de tu tablero' // Nueva descripción
   };
   return descs[code] || 'Ítem misterioso';
 }
@@ -461,7 +543,21 @@ function useItem(item) {
       used = true;
       break;
     case 'revelar':
-      used = revealRandomPosition();
+      used = revealRandomPositions();
+      break;
+    case 'defensa':
+      used = protectRandomCells();
+      if (used) {
+        updateStatus("¡Defensa electrónica activada! 2 celdas protegidas.");
+        // Quitar la protección después de 3 turnos
+        setTimeout(() => {
+          removeProtection();
+          updateStatus("La defensa electrónica ha expirado.");
+          drawBoards();
+        }, 3000 * 3); // 3 turnos (asumiendo 1 turno = ~3 segundos)
+      } else {
+        updateStatus("No hay suficientes celdas para proteger.");
+      }
       break;
     default:
       updateStatus("Item desconocido.");
@@ -500,6 +596,54 @@ function revealRandomShip() {
   return false;
 }
 
+function revealRandomPositions() {
+  // Encontrar celdas no reveladas en el tablero enemigo
+  const hiddenCells = [];
+  
+  for (let i = 0; i < gameConfig.boardSize; i++) {
+    for (let j = 0; j < gameConfig.boardSize; j++) {
+      // Solo considerar celdas que no han sido atacadas/reveladas y no son barcos ya revelados
+      if (gameConfig.enemyBoard[i][j] === '-' || gameConfig.enemyBoard[i][j] === 'O') {
+        hiddenCells.push({row: i, col: j});
+      }
+    }
+  }
+  
+  if (hiddenCells.length === 0) {
+    updateStatus("No hay posiciones para revelar");
+    return false;
+  }
+
+  // Revelar 2 celdas (o menos si no hay suficientes)
+  const cellsToReveal = Math.min(2, hiddenCells.length);
+  let revealedShips = 0;
+
+  for (let i = 0; i < cellsToReveal; i++) {
+    // Seleccionar una celda aleatoria y removerla del array para no repetir
+    const randomIndex = Math.floor(Math.random() * hiddenCells.length);
+    const cell = hiddenCells.splice(randomIndex, 1)[0];
+    
+    // Revelar la posición
+    if (gameConfig.enemyBoard[cell.row][cell.col] === 'O') {
+      gameConfig.enemyBoard[cell.row][cell.col] = 'R'; // Barco revelado
+      revealedShips++;
+      markHit(cell.row, cell.col); // Efecto visual para barcos
+    } else {
+      gameConfig.enemyBoard[cell.row][cell.col] = 'X'; // Agua revelada
+    }
+  }
+
+  // Mensaje descriptivo
+  if (revealedShips > 0) {
+    updateStatus(`¡Revelación muestra ${revealedShips} barco(s) enemigo(s)!`);
+  } else {
+    updateStatus("Revelación muestra agua - no hay barcos en estas posiciones");
+  }
+
+  drawBoards();
+  return true;
+}
+
 function useRadar() {
   let revelados = 0;
   for (let i = 0; i < gameConfig.boardSize; i++) {
@@ -512,4 +656,77 @@ function useRadar() {
     }
   }
   updateStatus(revelados > 0 ? `Radar reveló ${revelados} barcos!` : "No se encontraron barcos");
+}
+
+function protectRandomCells() {
+  // Limpiar protección anterior
+  gameConfig.protectedCells = [];
+  
+  // Encontrar celdas válidas para proteger (que no hayan sido atacadas y no estén ya protegidas)
+  const validCells = [];
+  for (let i = 0; i < gameConfig.boardSize; i++) {
+    for (let j = 0; j < gameConfig.boardSize; j++) {
+      if (gameConfig.playerBoard[i][j] === '-' || gameConfig.playerBoard[i][j] === 'O') {
+        validCells.push({row: i, col: j});
+      }
+    }
+  }
+  
+  // Si no hay suficientes celdas, no hacer nada
+  if (validCells.length < 2) {
+    return false;
+  }
+  
+  // Seleccionar 2 celdas aleatorias
+  for (let i = 0; i < 2; i++) {
+    const randomIndex = Math.floor(Math.random() * validCells.length);
+    const cell = validCells.splice(randomIndex, 1)[0];
+    gameConfig.protectedCells.push(cell);
+    
+    // Marcar visualmente la celda como protegida (usaremos 'P' temporalmente)
+    gameConfig.playerBoard[cell.row][cell.col] = 'P';
+  }
+  
+  return true;
+}
+
+function removeProtection() {
+  gameConfig.protectedCells.forEach(cell => {
+    // Restaurar el valor original de la celda
+    if (gameConfig.playerBoard[cell.row][cell.col] === 'P') {
+      gameConfig.playerBoard[cell.row][cell.col] = 
+        gameConfig.playerBoard[cell.row][cell.col] === 'O' ? 'O' : '-';
+    }
+  });
+  gameConfig.protectedCells = [];
+}
+
+function cleanOldBlinks() {
+  const currentFrame = frameCount;
+  
+  // Check if we need to clean up (limit how often we do this for performance)
+  if (currentFrame - gameConfig.lastBlinkCleanup < 10) {
+    return;
+  }
+  
+  // Track if we removed any blinks
+  let removedAny = false;
+  
+  // Clean up old blink effects
+  for (const key in gameConfig.blinkEffect) {
+    if (currentFrame - gameConfig.blinkEffect[key] > 10) { // 10 frames = ~0.33 seconds at 30fps
+      delete gameConfig.blinkEffect[key];
+      removedAny = true;
+    }
+  }
+  
+  // Update last cleanup time if we actually did something
+  if (removedAny) {
+    gameConfig.lastBlinkCleanup = currentFrame;
+  }
+}
+
+// Called when a cell is hit
+function markHit(row, col) {
+  gameConfig.blinkEffect[`${row},${col}`] = frameCount;
 }
