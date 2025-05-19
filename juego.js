@@ -13,7 +13,8 @@ const gameConfig = {
   doubleShot: false,
   blinkEffect: {},
   lastBlinkCleanup: 0,
-  inventory: []
+  inventory: [],
+   protectedCells: []
 };
 
 // Efectos de sonido
@@ -86,9 +87,36 @@ function drawBoard(board, x, y, isEnemy) {
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
       let content = isEnemy && board[i][j] === 'O' ? '-' : board[i][j];
+      
+      // 1. Handle blink effect first (this affects the cell content)
+      const blinkKey = `${i},${j}`;
+      if (gameConfig.blinkEffect[blinkKey]) {
+        const framesSinceHit = frameCount - gameConfig.blinkEffect[blinkKey];
+        if (framesSinceHit < 10) { // Blink for 10 frames
+          const pulse = floor(framesSinceHit / 2) % 2;
+          if (pulse === 0) {
+            content = '!'; // Use bright color for hit effect
+          }
+        }
+      }
+      
+      // 2. Set base cell color
       setCellColor(content, i, j);
       
-      stroke(0);
+      // 3. Handle protected cell borders (drawn on top of base cell)
+      const isProtected = !isEnemy && gameConfig.protectedCells.some(
+        cell => cell.row === i && cell.col === j
+      );
+      
+      if (isProtected) {
+        stroke(0, 255, 0); // Green border for protected cells
+        strokeWeight(2);
+      } else {
+        stroke(0); // Normal black border
+        strokeWeight(1);
+      }
+      
+      // 4. Draw the cell rectangle
       rect(j * gameConfig.cellSize, i * gameConfig.cellSize, 
            gameConfig.cellSize, gameConfig.cellSize);
     }
@@ -99,16 +127,16 @@ function drawBoard(board, x, y, isEnemy) {
 
 function setCellColor(content, row, col) {
   const colors = {
-    '-': '#F4F4F4',
-    'O': '#87CEFA',
-    'X': '#A9A9A9',
-    'R': '#FFFF66',
-    '!': '#E64832'
+    '-': '#F4F4F4',  // Empty
+    'O': '#87CEFA',  // Ship
+    'X': '#A9A9A9',  // Miss
+    'R': '#FFFF66',  // Revealed
+    '!': '#E64832',  // Hit
+    'P': '#90EE90'   // Protected (light green)
   };
   
   fill(colors[content] || '#F4F4F4');
 }
-
 
 function drawCoordinates() {
   fill(0);
@@ -270,13 +298,40 @@ function isValidCell(row, col) {
 }
 
 function aiTurn() {
-  let x, y;
+  let x, y, attempts = 0;
+  const maxAttempts = 50; // Para evitar bucles infinitos
+  
   do {
     x = floor(random(gameConfig.boardSize));
     y = floor(random(gameConfig.boardSize));
-  } while (['X', '!'].includes(gameConfig.playerBoard[y][x]));
+    attempts++;
+    
+    // Verificar si la celda está protegida
+    const isProtected = gameConfig.protectedCells.some(
+      cell => cell.row === y && cell.col === x
+    );
+    
+    if (attempts >= maxAttempts) {
+      // Si no encuentra celda no protegida después de muchos intentos, atacar igual
+      break;
+    }
+    
+  } while (
+    (['X', '!'].includes(gameConfig.playerBoard[y][x]) || 
+    gameConfig.protectedCells.some(cell => cell.row === y && cell.col === x)
+  ))
   
-  if (gameConfig.playerBoard[y][x] === 'O') {
+  // Verificar si el ataque fue bloqueado
+  const isProtected = gameConfig.protectedCells.some(
+    cell => cell.row === y && cell.col === x
+  );
+  
+  if (isProtected) {
+    updateStatus("¡Defensa electrónica ha bloqueado un ataque enemigo!");
+    gameConfig.playerBoard[y][x] = 'X'; // Marcar como ataque fallido
+    playSound(sounds.water);
+  } 
+  else if (gameConfig.playerBoard[y][x] === 'O') {
     gameConfig.playerBoard[y][x] = '!';
     markHit(y, x);
     gameConfig.playerShips--;
@@ -391,6 +446,7 @@ function resetGame() {
 
   gameConfig.inventory = [];
   gameConfig.doubleShot = false;
+  gameConfig.protectedCells = []; // Limpiar celdas protegidas
   updateInventoryUI();
 }
 
@@ -398,7 +454,8 @@ function getItemName(code) {
   const names = {
     'radar': 'Radar',
     'doble': 'Disparo Doble',
-    'revelar': 'Revelar Posición'
+    'revelar': 'Revelar Posición',
+    'defensa': 'Defensa Electrónica' // Nuevo nombre
   };
   return names[code] || 'Ítem';
 }
@@ -434,7 +491,8 @@ function getItemIcon(code) {
   const icons = {
     'radar': '🔍',
     'doble': '💥',
-    'revelar': '👁️'
+    'revelar': '👁️',
+    'defensa': '🛡️' // Nuevo icono
   };
   return icons[code] || '❓';
 }
@@ -443,7 +501,8 @@ function getItemDescription(code) {
   const descs = {
     'radar': 'Revela un barco enemigo',
     'doble': 'Permite disparar dos veces',
-    'revelar': 'Muestra una posición enemiga'
+    'revelar': 'Muestra una posición enemiga',
+    'defensa': 'Protege 2 celdas de tu tablero' // Nueva descripción
   };
   return descs[code] || 'Ítem misterioso';
 }
@@ -462,6 +521,20 @@ function useItem(item) {
       break;
     case 'revelar':
       used = revealRandomPosition();
+      break;
+    case 'defensa':
+      used = protectRandomCells();
+      if (used) {
+        updateStatus("¡Defensa electrónica activada! 2 celdas protegidas.");
+        // Quitar la protección después de 3 turnos
+        setTimeout(() => {
+          removeProtection();
+          updateStatus("La defensa electrónica ha expirado.");
+          drawBoards();
+        }, 3000 * 3); // 3 turnos (asumiendo 1 turno = ~3 segundos)
+      } else {
+        updateStatus("No hay suficientes celdas para proteger.");
+      }
       break;
     default:
       updateStatus("Item desconocido.");
@@ -512,4 +585,77 @@ function useRadar() {
     }
   }
   updateStatus(revelados > 0 ? `Radar reveló ${revelados} barcos!` : "No se encontraron barcos");
+}
+
+function protectRandomCells() {
+  // Limpiar protección anterior
+  gameConfig.protectedCells = [];
+  
+  // Encontrar celdas válidas para proteger (que no hayan sido atacadas y no estén ya protegidas)
+  const validCells = [];
+  for (let i = 0; i < gameConfig.boardSize; i++) {
+    for (let j = 0; j < gameConfig.boardSize; j++) {
+      if (gameConfig.playerBoard[i][j] === '-' || gameConfig.playerBoard[i][j] === 'O') {
+        validCells.push({row: i, col: j});
+      }
+    }
+  }
+  
+  // Si no hay suficientes celdas, no hacer nada
+  if (validCells.length < 2) {
+    return false;
+  }
+  
+  // Seleccionar 2 celdas aleatorias
+  for (let i = 0; i < 2; i++) {
+    const randomIndex = Math.floor(Math.random() * validCells.length);
+    const cell = validCells.splice(randomIndex, 1)[0];
+    gameConfig.protectedCells.push(cell);
+    
+    // Marcar visualmente la celda como protegida (usaremos 'P' temporalmente)
+    gameConfig.playerBoard[cell.row][cell.col] = 'P';
+  }
+  
+  return true;
+}
+
+function removeProtection() {
+  gameConfig.protectedCells.forEach(cell => {
+    // Restaurar el valor original de la celda
+    if (gameConfig.playerBoard[cell.row][cell.col] === 'P') {
+      gameConfig.playerBoard[cell.row][cell.col] = 
+        gameConfig.playerBoard[cell.row][cell.col] === 'O' ? 'O' : '-';
+    }
+  });
+  gameConfig.protectedCells = [];
+}
+
+function cleanOldBlinks() {
+  const currentFrame = frameCount;
+  
+  // Check if we need to clean up (limit how often we do this for performance)
+  if (currentFrame - gameConfig.lastBlinkCleanup < 10) {
+    return;
+  }
+  
+  // Track if we removed any blinks
+  let removedAny = false;
+  
+  // Clean up old blink effects
+  for (const key in gameConfig.blinkEffect) {
+    if (currentFrame - gameConfig.blinkEffect[key] > 10) { // 10 frames = ~0.33 seconds at 30fps
+      delete gameConfig.blinkEffect[key];
+      removedAny = true;
+    }
+  }
+  
+  // Update last cleanup time if we actually did something
+  if (removedAny) {
+    gameConfig.lastBlinkCleanup = currentFrame;
+  }
+}
+
+// Called when a cell is hit
+function markHit(row, col) {
+  gameConfig.blinkEffect[`${row},${col}`] = frameCount;
 }
