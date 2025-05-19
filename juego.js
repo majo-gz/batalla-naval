@@ -14,7 +14,17 @@ const gameConfig = {
   blinkEffect: {},
   lastBlinkCleanup: 0,
   inventory: [],
-   protectedCells: []
+   protectedCells: [],
+   enemyShipsTotal: 0
+};
+
+const gameStats = {
+  hits: 0,          // Disparos acertados
+  misses: 0,        // Disparos fallados
+  gamesPlayed: 0,   // Partidas jugadas
+  wins: 0,          // Partidas ganadas
+  currentShots: 0,  // Disparos en partida actual
+  totalShots: 0     // Disparos totales (todas las partidas)
 };
 
 // Efectos de sonido
@@ -32,17 +42,19 @@ const sounds = {
 let lastAttackPositions = [];
 
 function preload() {
-  sounds.background = loadSound('sonidos/musicaFondo.mp3');
-  sounds.victory = loadSound('sonidos/victoria.mp3');
-  sounds.defeat = loadSound('sonidos/derrota.mp3');
-  sounds.playerHit = loadSound('sonidos/impactoJugador.mp3');
-  sounds.enemyHit = loadSound('sonidos/impactoIA.mp3');
-  sounds.water = loadSound('sonidos/agua.mp3');
-  sounds.placeShip = loadSound('sonidos/colocarBarco.mp3');
+  sounds.background = loadSound('Assets/sounds/musicaFondo.mp3');
+  sounds.victory = loadSound('Assets/sounds/victoria.mp3');
+  sounds.defeat = loadSound('Assets/sounds/derrota.mp3');
+  sounds.playerHit = loadSound('Assets/sounds/impactoJugador.mp3');
+  sounds.enemyHit = loadSound('Assets/sounds/impactoIA.mp3');
+  sounds.water = loadSound('Assets/sounds/agua.mp3');
+  sounds.placeShip = loadSound('Assets/sounds/colocarBarco.mp3');
+  
+  //sounds.radar =loadSound(Assets/sounds/radar.mp3)
 }
 
 function setup() {
-  createCanvas(800, 400).parent('game-container');
+  createCanvas(800, 340).parent('game-container');
   textAlign(CENTER, CENTER);
   
   setupEventListeners();
@@ -59,6 +71,14 @@ function setupEventListeners() {
   document.getElementById('btn-start-manual').addEventListener('click', startManualPlacement);
   document.getElementById('btn-reiniciar-victoria').addEventListener('click', resetGame);
     document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
+
+  document.getElementById('btn-stats-end').addEventListener('click', function() {
+    const statsPanel = document.getElementById('stats-panel');
+    statsPanel.classList.toggle('oculto');
+    this.textContent = statsPanel.classList.contains('oculto') 
+        ? 'Ver estadísticas' 
+        : 'Ocultar estadísticas';
+});
 }
 
 function initializeBoards() {
@@ -165,7 +185,7 @@ function setCellColor(content, row, col) {
     'R': '#FFFF66',  // Revealed
     '!': '#E64832',  // Hit
     'P': '#90EE90',   // Protected (light green),
-    'B': '#00FF00'   // Blink verde (verde puro)
+    'B': '#FFFF66'   // Blink verde (verde puro)
   };
   
   fill(colors[content] || '#F4F4F4');
@@ -221,8 +241,15 @@ function initGame(mode, shipCount) {
   gameConfig.gameMode = mode;
   initializeBoards();
   
+  
+
   gameConfig.playerShips = shipCount;
   gameConfig.enemyShips = shipCount;
+  gameConfig.enemyShipsTotal = shipCount; // Guarda el total inicial de barcos
+  gameStats.hits = 0;
+  gameStats.misses = 0;
+  gameStats.currentShots = 0;
+  gameConfig.enemyShipsTotal = shipCount;
   
   if (gameConfig.gameMode !== 'manual') {placeRandomShips(gameConfig.playerBoard, gameConfig.playerShips);} 
   placeRandomShips(gameConfig.enemyBoard, gameConfig.enemyShips);
@@ -331,6 +358,18 @@ function handlePlayerAttack(canvasX, canvasY) {
     drawBoards();
     setTimeout(aiTurn, 1000);
   }
+
+  if (cellValue === 'O' || cellValue === 'R') {
+    gameStats.hits++;
+    gameStats.currentShots++;
+    gameStats.totalShots++;
+  } else if (cellValue === '-') {
+    gameStats.misses++;
+    gameStats.currentShots++;
+    gameStats.totalShots++;
+  }
+  
+  updateStats();
   
   updateShipCount();
   drawBoards();
@@ -398,22 +437,44 @@ function processAttackResult(row, col) {
   if (isCellProtected(row, col)) {
     gameConfig.playerBoard[row][col] = 'X';
     updateStatus("¡Defensa electrónica ha bloqueado un ataque enemigo!");
+    gameConfig.playerBoard[y][x] = 'X'; // Marcar como ataque fallido
+     gameStats.misses++;
+    gameStats.currentShots++;
+    gameStats.totalShots++;
     playSound(sounds.water);
   } 
   else if (gameConfig.playerBoard[row][col] === 'O') {
     gameConfig.playerBoard[row][col] = '!';
     markHit(row, col);
     gameConfig.playerShips--;
-    updateStatus("¡La IA ha impactado uno de tus barcos!");
+    gameStats.hits++;
+    gameStats.currentShots++;
+    gameStats.totalShots++;
+    updateStatus("La IA ha impactado uno de tus barcos!");
     playSound(sounds.enemyHit);
   } else {
     gameConfig.playerBoard[row][col] = 'X';
+    gameStats.misses++;
+    gameStats.currentShots++;
+    gameStats.totalShots++;
     updateStatus("La IA ha atacado y falló");
     playSound(sounds.water);
   }
 }
 
 function checkGameEnd(loser) {
+
+  /*
+    const isVictory = loser === 'enemy';
+  
+  if (isVictory) {
+    gameStats.wins++;
+    gameStats.gamesPlayed++;
+  } else {
+    gameStats.gamesPlayed++;
+  }
+  */ 
+
   const shipsLeft = loser === 'player' ? gameConfig.playerShips : gameConfig.enemyShips;
   
   if (shipsLeft <= 0) {
@@ -824,4 +885,21 @@ function cleanOldBlinks() {
 // Called when a cell is hit
 function markHit(row, col) {
   gameConfig.blinkEffect[`${row},${col}`] = frameCount;
+}
+
+
+function updateStats() {
+  const currentAccuracy = gameStats.currentShots > 0 
+    ? Math.round((gameStats.hits / gameStats.currentShots) * 100) 
+    : 0;
+  
+  const totalAccuracy = gameStats.totalShots > 0
+    ? Math.round(((gameStats.wins * gameConfig.enemyShipsTotal) / gameStats.totalShots) * 100)
+    : 0;
+
+  document.getElementById('stats-shots').textContent = gameStats.currentShots;
+  document.getElementById('stats-accuracy').textContent = `${currentAccuracy}%`;
+  document.getElementById('stats-sunk').textContent = gameConfig.enemyShipsTotal - gameConfig.enemyShips;
+  document.getElementById('stats-wins').textContent = gameStats.wins;
+  document.getElementById('stats-total-accuracy').textContent = `${totalAccuracy}%`;
 }
