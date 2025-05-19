@@ -89,16 +89,18 @@ function drawBoard(board, x, y, isEnemy) {
       let content = isEnemy && board[i][j] === 'O' ? '-' : board[i][j];
       
       // 1. Handle blink effect first (this affects the cell content)
-      const blinkKey = `${i},${j}`;
-      if (gameConfig.blinkEffect[blinkKey]) {
-        const framesSinceHit = frameCount - gameConfig.blinkEffect[blinkKey];
-        if (framesSinceHit < 10) { // Blink for 10 frames
-          const pulse = floor(framesSinceHit / 2) % 2;
-          if (pulse === 0) {
-            content = '!'; // Use bright color for hit effect
-          }
-        }
-      }
+// Handle blink effect for this cell (verde)
+const blinkKey = `${i},${j}`;
+if (gameConfig.blinkEffect[blinkKey]) {
+  const framesSinceHit = frameCount - gameConfig.blinkEffect[blinkKey];
+  if (framesSinceHit < 10) { // Blink for 10 frames
+    // Efecto de parpadeo verde
+    const pulse = floor(framesSinceHit / 2) % 2;
+    if (pulse === 0) {
+      content = 'B'; // Usamos 'B' para blink verde
+    }
+  }
+}
       
       // 2. Set base cell color
       setCellColor(content, i, j);
@@ -132,7 +134,8 @@ function setCellColor(content, row, col) {
     'X': '#A9A9A9',  // Miss
     'R': '#FFFF66',  // Revealed
     '!': '#E64832',  // Hit
-    'P': '#90EE90'   // Protected (light green)
+    'P': '#90EE90',   // Protected (light green),
+    'B': '#00FF00'   // Blink verde (verde puro)
   };
   
   fill(colors[content] || '#F4F4F4');
@@ -571,6 +574,41 @@ function revealRandomShip() {
   
   updateStatus("No hay barcos enemigos para revelar.");
   return false;
+}
+
+function revealRandomPosition() {
+  // Encontrar celdas no reveladas en el tablero enemigo
+  const hiddenCells = [];
+  
+  for (let i = 0; i < gameConfig.boardSize; i++) {
+    for (let j = 0; j < gameConfig.boardSize; j++) {
+      // Solo considerar celdas que no han sido atacadas y no son barcos ya revelados
+      if (gameConfig.enemyBoard[i][j] === '-' || gameConfig.enemyBoard[i][j] === 'O') {
+        hiddenCells.push({row: i, col: j});
+      }
+    }
+  }
+  
+  if (hiddenCells.length === 0) {
+    updateStatus("No hay posiciones para revelar");
+    return false;
+  }
+  
+  // Seleccionar una celda aleatoria
+  const randomCell = hiddenCells[Math.floor(Math.random() * hiddenCells.length)];
+  
+  // Revelar la posición (mostrar si hay barco o no)
+  if (gameConfig.enemyBoard[randomCell.row][randomCell.col] === 'O') {
+    gameConfig.enemyBoard[randomCell.row][randomCell.col] = 'R'; // Barco revelado
+    updateStatus("¡Revelación muestra un barco enemigo!");
+  } else {
+    gameConfig.enemyBoard[randomCell.row][randomCell.col] = 'X'; // Agua revelada
+    updateStatus("Revelación muestra agua - no hay barco aquí");
+  }
+  
+  markHit(randomCell.row, randomCell.col); // Efecto visual
+  drawBoards();
+  return true;
 }
 
 function useRadar() {
