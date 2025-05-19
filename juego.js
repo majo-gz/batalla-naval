@@ -402,7 +402,7 @@ function processAttackResult(row, col) {
   } 
   else if (gameConfig.playerBoard[row][col] === 'O') {
     gameConfig.playerBoard[row][col] = '!';
-    markHit(row, col);
+    //markHit(row, col);
     gameConfig.playerShips--;
     updateStatus("¡La IA ha impactado uno de tus barcos!");
     playSound(sounds.enemyHit);
