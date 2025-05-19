@@ -62,14 +62,35 @@ function setupEventListeners() {
 }
 
 function initializeBoards() {
-  gameConfig.playerBoard = createEmptyBoard();
-  gameConfig.enemyBoard = createEmptyBoard();
+
+    // Inicializar con valores por defecto si no existen
+    gameConfig.boardSize = gameConfig.boardSize || 8;
+    gameConfig.cellSize = gameConfig.cellSize || 40;
+
+    // Crear tableros con validación
+    try {
+        gameConfig.playerBoard = createEmptyBoard(gameConfig.boardSize);
+        gameConfig.enemyBoard = createEmptyBoard(gameConfig.boardSize);
+        
+        // Inicializar contadores relacionados
+        gameConfig.playerShips = gameConfig.playerShips || 0;
+        gameConfig.enemyShips = gameConfig.enemyShips || 0;
+        
+    } catch (error) {
+        console.error("Error al inicializar tableros:", error);
+        // Asignar tableros vacíos como fallback
+        gameConfig.playerBoard = [['-']];
+        gameConfig.enemyBoard = [['-']];
+    }
 }
 
-function createEmptyBoard() {
-  return Array(gameConfig.boardSize).fill().map(() => 
-    Array(gameConfig.boardSize).fill('-')
-  );
+function createEmptyBoard(size) {
+    // Validar tamaño del tablero
+    size = Math.max(5, Math.min(size || 8, 10)); // Entre 5 y 10 como límites
+    
+    return Array(size).fill().map(() => 
+        Array(size).fill('-') // '-' representa celda vacía
+    );
 }
 
 function drawBoards() {
@@ -164,15 +185,24 @@ function startQuickGame() {
 }
 
 function showManualConfig() {
+  console.log("showManualConfig called");
   gameConfig.gameMode = 'manual';
   initializeBoards();
+
+  // Asegúrate de que el panel de configuración manual esté visible
+document.getElementById('manual-placement').classList.remove('oculto');
   document.getElementById('manual-placement').style.display = 'block';
+  // Asegúrate de que las pantallas de victoria y derrota estén ocultas
+  //document.getElementById('pantalla-victoria').classList.add('oculto');
+  //document.getElementById('pantalla-derrota').classList.add('oculto');
+
   updateStatus("Configura tu flota - Elige cuántos barcos deseas");
   drawBoards();
 }
 
+
 function startManualPlacement() {
-  const ships = parseInt(document.getElementById('ship-amount').value);
+  const ships = parseInt(document.getElementById('ship-amount').value) || 3;
   if (ships < 3 || ships > 10) {
     alert("Por favor elige entre 3 y 10 barcos");
     return;
@@ -310,7 +340,7 @@ function isValidCell(row, col) {
 }
 
 function aiTurn() {
-  const attackCount = Math.random() < 0.3 ? 2 : 1; // 30% de chance de 2 ataques
+  const attackCount = Math.random() < 0.6 ? 2 : 1; // 30% de chance de 2 ataques
   
   // Primer ataque inmediato
   performAIAttack();
@@ -407,10 +437,10 @@ function tryGetItem() {
   if (Math.random() < 0.3) { // 30% de chance de obtener un ítem
     // Definir probabilidades (puedes ajustar estos valores)
     const itemRarities = {
-      'doble': 5,    // 50% - Común
-      'radar': 30,     // 30% - Poco común
-      'revelar': 15,   // 15% - Raro
-      'defensa': 50     // 5%  - Muy raro
+      'doble': 30,
+      'radar': 10,
+      'revelar': 35,
+      'defensa': 25
     };
 
     // Calcular total para normalización
@@ -489,10 +519,10 @@ function showMessage(text) {
 }
 
 function resetGame() {
-    // Detener música y sonidos
+    // 1. Stop all audio and clear any intervals
     stopBackgroundMusic();
     
-    // Reiniciar propiedades del gameConfig sin reasignarlo
+    // 2. Completely reset game state
     gameConfig.playerShips = 0;
     gameConfig.enemyShips = 0;
     gameConfig.gameMode = '';
@@ -500,31 +530,39 @@ function resetGame() {
     gameConfig.placingShips = false;
     gameConfig.shipsToPlace = 0;
     gameConfig.shipsPlaced = 0;
-    gameConfig.remainingShips = [];
     gameConfig.doubleShot = false;
-    gameConfig.blinkEffect = {};
-    gameConfig.lastBlinkCleanup = 0;
+    gameConfig.predictionTurns = 0; // If using prediction feature
+    gameConfig.turnNumber = 0; // If tracking turns
+    
+    // Reset arrays/objects by creating new instances
+    gameConfig.remainingShips = [];
     gameConfig.inventory = [];
     gameConfig.protectedCells = [];
+    gameConfig.blinkEffect = {};
+    gameConfig.lastBlinkCleanup = 0;
     
-    // Reiniciar tableros
-    gameConfig.playerBoard = createEmptyBoard();
-    gameConfig.enemyBoard = createEmptyBoard();
+    // 3. Reinitialize boards (using direct implementation)
+    gameConfig.playerBoard = Array(gameConfig.boardSize).fill()
+                          .map(() => Array(gameConfig.boardSize).fill('-'));
+    gameConfig.enemyBoard = Array(gameConfig.boardSize).fill()
+                         .map(() => Array(gameConfig.boardSize).fill('-'));
     
-    // Actualizar UI
+    // 4. Reset UI
     updateStatus("Selecciona un modo de juego");
     updateShipCount();
     updateInventoryUI();
-    
-    // Mostrar pantalla principal
     showScreen('pantalla-inicio');
     
-    // Redibujar tableros limpios
+    // 5. Redraw boards
     drawBoards();
     
-    // Opcional: reproducir sonido de reinicio
-    if (sounds.buttonClick) {
-        playSound(sounds.buttonClick);
+    // 6. Safe sound play
+    try {
+        if (sounds.buttonClick && !sounds.buttonClick.isPlaying()) {
+            sounds.buttonClick.play();
+        }
+    } catch (e) {
+        console.error("Error playing reset sound:", e);
     }
 }
 
@@ -604,12 +642,12 @@ function useItem(item) {
       used = protectRandomCells();
       if (used) {
         updateStatus("¡Defensa electrónica activada! 2 celdas protegidas.");
-        // Quitar la protección después de 3 turnos
+        // Quitar la protección después de 2 turnos
         setTimeout(() => {
           removeProtection();
           updateStatus("La defensa electrónica ha expirado.");
           drawBoards();
-        }, 3000 * 3); // 3 turnos (asumiendo 1 turno = ~3 segundos)
+        }, 3000 * 2); // 3 turnos (asumiendo 1 turno = ~3 segundos)
       } else {
         updateStatus("No hay suficientes celdas para proteger.");
       }
