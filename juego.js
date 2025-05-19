@@ -40,7 +40,7 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(800, 400).parent('game-container');
+  createCanvas(800, 340).parent('game-container');
   textAlign(CENTER, CENTER);
   
   setupEventListeners();
@@ -135,7 +135,7 @@ function setCellColor(content, row, col) {
     'R': '#FFFF66',  // Revealed
     '!': '#E64832',  // Hit
     'P': '#90EE90',   // Protected (light green),
-    'B': '#00FF00'   // Blink verde (verde puro)
+    'B': '#FFFF66'   // Blink verde (verde puro)
   };
   
   fill(colors[content] || '#F4F4F4');
