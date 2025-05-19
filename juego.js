@@ -29,6 +29,8 @@ const sounds = {
   isMusicPlaying: false
 };
 
+let lastAttackPositions = [];
+
 function preload() {
   sounds.background = loadSound('sonidos/musicaFondo.mp3');
   sounds.victory = loadSound('sonidos/victoria.mp3');
@@ -55,6 +57,8 @@ function setupEventListeners() {
   document.getElementById('btn-rapido').addEventListener('click', startQuickGame);
   document.getElementById('btn-manual').addEventListener('click', showManualConfig);
   document.getElementById('btn-start-manual').addEventListener('click', startManualPlacement);
+  document.getElementById('btn-reiniciar-victoria').addEventListener('click', resetGame);
+    document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
 }
 
 function initializeBoards() {
@@ -76,8 +80,13 @@ function drawBoards() {
 }
 
 function showScreen(id) {
-  document.querySelectorAll('.pantalla').forEach(div => div.classList.add('oculto'));
-  document.getElementById(id).classList.remove('oculto');
+    // Ocultar todas las pantallas
+    document.querySelectorAll('.pantalla').forEach(div => {
+        div.classList.add('oculto');
+    });
+    
+    // Mostrar la pantalla solicitada
+    document.getElementById(id).classList.remove('oculto');
 }
 
 function drawBoard(board, x, y, isEnemy) {
@@ -301,56 +310,75 @@ function isValidCell(row, col) {
 }
 
 function aiTurn() {
-  let x, y, attempts = 0;
-  const maxAttempts = 50; // Para evitar bucles infinitos
+  const attackCount = Math.random() < 0.3 ? 2 : 1; // 30% de chance de 2 ataques
+  
+  // Primer ataque inmediato
+  performAIAttack();
+  
+  // Segundo ataque con retraso (si aplica)
+  if (attackCount === 2) {
+    updateStatus("¡La IA está preparando un ataque doble!");
+    setTimeout(() => {
+      performAIAttack();
+      drawBoards();
+      checkGameEnd('player');
+      startPlayerTurn();
+    }, 800);
+  } else {
+    checkGameEnd('player');
+    startPlayerTurn();
+  }
+}
+
+function performAIAttack() {
+  let x, y;
+  let attempts = 0;
+  const maxAttempts = 50;
   
   do {
     x = floor(random(gameConfig.boardSize));
     y = floor(random(gameConfig.boardSize));
     attempts++;
-    
-    // Verificar si la celda está protegida
-    const isProtected = gameConfig.protectedCells.some(
-      cell => cell.row === y && cell.col === x
-    );
-    
-    if (attempts >= maxAttempts) {
-      // Si no encuentra celda no protegida después de muchos intentos, atacar igual
-      break;
-    }
-    
   } while (
     (['X', '!'].includes(gameConfig.playerBoard[y][x]) || 
-    gameConfig.protectedCells.some(cell => cell.row === y && cell.col === x)
-  ))
-  
-  // Verificar si el ataque fue bloqueado
-  const isProtected = gameConfig.protectedCells.some(
-    cell => cell.row === y && cell.col === x
+     isCellProtected(y, x) ||
+     lastAttackPositions.some(pos => pos.x === x && pos.y === y)) && 
+    attempts < maxAttempts
   );
   
-  if (isProtected) {
+  lastAttackPositions.push({x, y});
+  processAttackResult(y, x);
+  
+  // Limpiar después del turno
+  if (lastAttackPositions.length >= 2) {
+    lastAttackPositions = [];
+  }
+}
+
+// Helper functions (las mismas que antes)
+function isCellProtected(row, col) {
+  return gameConfig.protectedCells.some(
+    cell => cell.row === row && cell.col === col
+  );
+}
+
+function processAttackResult(row, col) {
+  if (isCellProtected(row, col)) {
+    gameConfig.playerBoard[row][col] = 'X';
     updateStatus("¡Defensa electrónica ha bloqueado un ataque enemigo!");
-    gameConfig.playerBoard[y][x] = 'X'; // Marcar como ataque fallido
     playSound(sounds.water);
   } 
-  else if (gameConfig.playerBoard[y][x] === 'O') {
-    gameConfig.playerBoard[y][x] = '!';
-    markHit(y, x);
+  else if (gameConfig.playerBoard[row][col] === 'O') {
+    gameConfig.playerBoard[row][col] = '!';
+    markHit(row, col);
     gameConfig.playerShips--;
-    updateStatus("La IA ha impactado uno de tus barcos!");
+    updateStatus("¡La IA ha impactado uno de tus barcos!");
     playSound(sounds.enemyHit);
   } else {
-    gameConfig.playerBoard[y][x] = 'X';
-    updateStatus("La IA ha atacado y falló. Tu turno!");
+    gameConfig.playerBoard[row][col] = 'X';
+    updateStatus("La IA ha atacado y falló");
     playSound(sounds.water);
   }
-  
-  updateShipCount();
-  drawBoards();
-  
-  checkGameEnd('player');
-  startPlayerTurn();
 }
 
 function checkGameEnd(loser) {
@@ -461,16 +489,43 @@ function showMessage(text) {
 }
 
 function resetGame() {
-  stopBackgroundMusic();
-  showScreen('pantalla-inicio');
-  initializeBoards();
-  updateStatus("Esperando...");
-  updateShipCount();
-
-  gameConfig.inventory = [];
-  gameConfig.doubleShot = false;
-  gameConfig.protectedCells = []; // Limpiar celdas protegidas
-  updateInventoryUI();
+    // Detener música y sonidos
+    stopBackgroundMusic();
+    
+    // Reiniciar propiedades del gameConfig sin reasignarlo
+    gameConfig.playerShips = 0;
+    gameConfig.enemyShips = 0;
+    gameConfig.gameMode = '';
+    gameConfig.isPlayerTurn = true;
+    gameConfig.placingShips = false;
+    gameConfig.shipsToPlace = 0;
+    gameConfig.shipsPlaced = 0;
+    gameConfig.remainingShips = [];
+    gameConfig.doubleShot = false;
+    gameConfig.blinkEffect = {};
+    gameConfig.lastBlinkCleanup = 0;
+    gameConfig.inventory = [];
+    gameConfig.protectedCells = [];
+    
+    // Reiniciar tableros
+    gameConfig.playerBoard = createEmptyBoard();
+    gameConfig.enemyBoard = createEmptyBoard();
+    
+    // Actualizar UI
+    updateStatus("Selecciona un modo de juego");
+    updateShipCount();
+    updateInventoryUI();
+    
+    // Mostrar pantalla principal
+    showScreen('pantalla-inicio');
+    
+    // Redibujar tableros limpios
+    drawBoards();
+    
+    // Opcional: reproducir sonido de reinicio
+    if (sounds.buttonClick) {
+        playSound(sounds.buttonClick);
+    }
 }
 
 function getItemName(code) {
