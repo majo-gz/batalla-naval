@@ -42,13 +42,13 @@ const sounds = {
 let lastAttackPositions = [];
 
 function preload() {
-  sounds.background = loadSound('Assets/sounds/musicaFondo.mp3');
-  sounds.victory = loadSound('Assets/sounds/victoria.mp3');
-  sounds.defeat = loadSound('Assets/sounds/derrota.mp3');
-  sounds.playerHit = loadSound('Assets/sounds/impactoJugador.mp3');
-  sounds.enemyHit = loadSound('Assets/sounds/impactoIA.mp3');
-  sounds.water = loadSound('Assets/sounds/agua.mp3');
-  sounds.placeShip = loadSound('Assets/sounds/colocarBarco.mp3');
+  sounds.background = loadSound('assets/sounds/musicaFondo.mp3');
+  sounds.victory = loadSound('assets/sounds/victoria.mp3');
+  sounds.defeat = loadSound('assets/sounds/derrota.mp3');
+  sounds.playerHit = loadSound('assets/sounds/impactoJugador.mp3');
+  sounds.enemyHit = loadSound('assets/sounds/impactoIA.mp3');
+  sounds.water = loadSound('assets/sounds/agua.mp3');
+  sounds.placeShip = loadSound('assets/sounds/colocarBarco.mp3');
   
   //sounds.radar =loadSound(Assets/sounds/radar.mp3)
 }
@@ -70,7 +70,8 @@ function setupEventListeners() {
   document.getElementById('btn-manual').addEventListener('click', showManualConfig);
   document.getElementById('btn-start-manual').addEventListener('click', startManualPlacement);
   document.getElementById('btn-reiniciar-victoria').addEventListener('click', resetGame);
-    document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
+  document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
+    //document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
 
   document.getElementById('btn-stats-end').addEventListener('click', function() {
     const statsPanel = document.getElementById('stats-panel');
@@ -334,10 +335,11 @@ function handlePlayerAttack(canvasX, canvasY) {
   
   const cellValue = gameConfig.enemyBoard[row][col];
   
-  if (cellValue === 'O' || cellValue === 'R') {
+   if (cellValue === 'O' || cellValue === 'R') {
     gameConfig.enemyBoard[row][col] = '!';
     markHit(row, col);
-    gameConfig.enemyShips--;
+    gameConfig.enemyShips--; // ← Esto ya está correcto
+    updateShipCount();
     updateStatus("¡Impacto! Has hundido un barco enemigo.");
     playSound(sounds.playerHit);
   } else if (cellValue === '-') {
@@ -396,6 +398,7 @@ function aiTurn() {
       startPlayerTurn();
     }, 800);
   } else {
+    updateShipCount();
     checkGameEnd('player');
     startPlayerTurn();
   }
@@ -420,6 +423,8 @@ function performAIAttack() {
   lastAttackPositions.push({x, y});
   processAttackResult(y, x);
   
+  updateShipCount();
+
   // Limpiar después del turno
   if (lastAttackPositions.length >= 2) {
     lastAttackPositions = [];
@@ -532,8 +537,15 @@ function updateStatus(message) {
 }
 
 function updateShipCount() {
+  const playerShipsDisplay = gameConfig.playerShips > 0 ? gameConfig.playerShips : 0;
+  const enemyShipsDisplay = gameConfig.enemyShips > 0 ? gameConfig.enemyShips : 0;
+  
   document.getElementById('ship-count').textContent = 
-    `Tus barcos: ${gameConfig.playerShips} | Barcos enemigos: ${gameConfig.enemyShips}`;
+    `Tus barcos: ${playerShipsDisplay} | Barcos enemigos: ${enemyShipsDisplay}`;
+  
+  // Actualizar estadísticas de hundimientos
+  document.getElementById('stats-sunk').textContent = 
+    gameConfig.enemyShipsTotal - enemyShipsDisplay;
 }
 
 function startBackgroundMusic() {
