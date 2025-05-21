@@ -1,0 +1,429 @@
+CAMBIOS REALIZADOS
+
+1) AÑADIR FUENTES (CAMBIO EN EL CSS)
+
+@font-face {
+  font-family: 'FuenteTitulo';
+  src: url('assets/fonts/tittle.otf') format('opentype');
+}
+/*
+@font-face {
+  font-family: 'FuenteCuerpo';
+  src: url('assets/fonts/body.ttf') format('truetype');
+}*/
+
+body {
+    font-family: 'Times New Roman', sans-serif;
+    background-color: #1a2f4b;
+    color: #fff;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'FuenteTitulo', serif;
+  font-weight: 100;
+  color: #fff;
+  margin-bottom: 0.5em;
+   letter-spacing: 2.5px; 
+}
+
+
+
+2)AÑADIR SONIDOS
+
+// Efectos de sonido
+const sounds = {
+  background: null,
+  victory: null,defeat: null,playerHit: null, enemyHit: null, water: null, placeShip: null, 
+  getItem: null, shield: null, radar: null,reveal: null, click: null, dobledisparo:null,
+   isMusicPlaying: false
+};
+
+function preload() {
+  sounds.background = loadSound('Assets/sounds/musicaFondo.mp3');
+  sounds.victory = loadSound('Assets/sounds/victoria.mp3');
+  sounds.defeat = loadSound('Assets/sounds/derrota.mp3');
+  sounds.playerHit = loadSound('Assets/sounds/impactoJugador.mp3');
+  sounds.enemyHit = loadSound('Assets/sounds/impactoIA.mp3');
+  sounds.water = loadSound('Assets/sounds/agua.mp3');
+  sounds.placeShip = loadSound('Assets/sounds/colocarBarco.mp3');
+  sounds.getItem = loadSound('assets/sounds/obteneritem.mp3');//desde acá empiezan los cambios
+  sounds.shield = loadSound('assets/sounds/shield.mp3');
+  sounds.radar = loadSound('assets/sounds/radar.mp3');
+  sounds.reveal = loadSound('assets/sounds/revelar.mp3');
+  sounds.click = loadSound('assets/sounds/click.mp3');
+  sounds.dobledisparo = loadSound('assets/sounds/dobledisparo.mp3');
+  
+}
+
+
+QUERÍA AÑADIR SONIDO A LOS BOTONES NORMALES PERO NO ME SALIÓ
+function setupButtonSounds() {
+  document.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => playSound(sounds.click));
+  });
+}
+
+function setup() {
+  createCanvas(800, 340).parent('game-container');
+
+  textAlign(CENTER, CENTER);
+  
+  setupEventListeners();
+  initializeBoards();
+  drawBoards();
+
+  setupButtonSounds();//añadí aquí
+  userStartAudio();//creo que esto no hace nada
+  frameRate(30);
+}
+
+
+function useItem(item) {
+  let used = false;
+  
+  switch(item) {
+    case 'radar':
+      used = revealRandomShip();
+        playSound(sounds.radar);//cambio aquí
+      break;
+    case 'doble':
+      gameConfig.doubleShot = true;
+      updateStatus("¡Activado doble disparo!");
+        playSound(sounds.dobledisparo);//cambio aquí
+      used = true;
+      break;
+    case 'revelar':
+      used = revealRandomPositions();
+      playSound(sounds.reveal);//cambio aquí
+      break;
+    case 'defensa':
+      used = protectRandomCells();
+       playSound(sounds.shield);//cambio aquí
+      if (used) {
+        updateStatus("¡Defensa electrónica activada! 2 celdas protegidas.");
+        // Quitar la protección después de 2 turnos
+        setTimeout(() => {
+          removeProtection();
+          updateStatus("La defensa electrónica ha expirado.");
+          drawBoards();
+        }, 3000 * 2); // 3 turnos (asumiendo 1 turno = ~3 segundos)
+      } else {
+        updateStatus("No hay suficientes celdas para proteger.");
+      }
+      break;
+    default:
+      updateStatus("Item desconocido.");
+  }
+  
+  if (used) {
+    const index = gameConfig.inventory.indexOf(item);
+    if (index > -1) {
+      gameConfig.inventory.splice(index, 1);
+    }
+    updateInventoryUI();
+  }
+}
+
+
+3)PANTALLAS TEMPORALES QUE APARECEN UNOS SEGUNDOS (PARA CAMBIO DE TURNO Y AVISSAR QUE OBTIENE ITEM)
+
+
+CSS
+
+#notificacion-pantalla {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+#notificacion-pantalla.mostrar {
+  opacity: 1;
+}
+
+.contenido-notificacion {
+  background: #222;
+  padding: 30px 60px;
+  border-radius: 15px;
+  font-size: 28px;
+  color: #fff;
+  text-align: center;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+
+HTML 
+
+<div id="notificacion-pantalla">
+  <div class="contenido-notificacion"></div>
+</div>
+
+
+JS (ACOMODAR,NO ADAPTADO TODAVÍA, RECIÉN SALIDO DE LA IA)
+
+function mostrarNotificacion(texto, duracion = 2000) {
+  const pantalla = document.getElementById('notificacion-pantalla');
+  const contenido = pantalla.querySelector('.contenido-notificacion');
+  
+  // Configura el contenido
+  contenido.textContent = texto;
+  
+  // Muestra la pantalla
+  pantalla.style.display = 'flex'; // Aseguramos que sea visible
+  setTimeout(() => {
+    pantalla.classList.add('mostrar');
+  }, 10);
+  
+  // Oculta después de la duración
+  setTimeout(() => {
+    pantalla.classList.remove('mostrar');
+    setTimeout(() => {
+      pantalla.style.display = 'none';
+    }, 500); // Espera a que termine la transición
+  }, duracion);
+}
+
+// Ejemplo al cambiar de turno
+function startPlayerTurn() {
+  gameConfig.isPlayerTurn = true;
+  mostrarNotificacion("?? TU TURNO ??", 1500);
+}
+
+function tryGetItem() { 
+    mostrarNotificacion(`? ${item.toUpperCase()} ?`, 2000);
+  }
+}
+
+
+
+4)BORDE NEÓN AL TABLERO
+function drawBoards() {
+  clear();
+  
+  // Dibuja el borde neón para el tablero activo
+  if (gameConfig.isPlayerTurn) {
+    drawNeonBorder(0, 0, gameConfig.playerBoard); // Borde para tablero jugador
+  } else {
+    drawNeonBorder(480, 0, gameConfig.enemyBoard); // Borde para tablero enemigo
+  }
+  
+  // Dibuja los tableros normalmente
+  drawBoard(gameConfig.playerBoard, 0, 0, false);
+  drawBoard(gameConfig.enemyBoard, 480, 0, true);
+}
+
+// Función para dibujar el borde neón
+function drawNeonBorder(x, y, board) {
+  push();
+  translate(x, y);
+  
+  const padding = 5; // Espacio alrededor del borde
+  const cellSize = gameConfig.cellSize;
+  const boardSize = board.length;
+  
+  noFill();
+  strokeWeight(3);
+  
+  // Efecto neón azul (multi-capas para mayor brillo)
+  for (let i = 0; i < 3; i++) {
+    const alpha = 150 - (i * 50); // Transparencia decreciente
+    stroke(0, 200 + (i * 55), 255, alpha); // Azul neón
+    
+    // Dibuja rectángulo alrededor del tablero
+    rect(
+      -padding, 
+      -padding, 
+      boardSize * cellSize + padding * 2, 
+      boardSize * cellSize + padding * 2,
+      5 // Bordes redondeados
+    );
+  }
+  
+  pop();
+}
+
+function aiTurn() {
+  gameConfig.isPlayerTurn = false;
+  
+  // Añade borde neón al tablero enemigo y remueve el del jugador
+  document.getElementById('tablero-enemigo').classList.add('tablero-activo');
+  document.getElementById('tablero-jugador').classList.remove('tablero-activo');
+  
+  // ... resto de tu lógica para el turno de la IA
+}
+
+
+
+5) COOLDOWN PARA PODER VOLVER A ATACAR
+
+No funcionó, se bugeaba y solo el jugador atacaba
+
+
+6)ANIMACIONES (sin probar)
+
+¡No necesitas ninguna librería adicional! Con **p5.js** puedes crear todos esos efectos directamente. Aquí te muestro cómo implementarlos de forma optimizada:
+
+---
+
+### ?? **1. Salpicadura de Agua (al fallar un disparo)**
+**Técnica**: Partículas simples con física básica.
+```javascript
+// En tu función donde se detecta un fallo (disparo al agua):
+function drawWaterSplash(x, y) {
+  for (let i = 0; i < 20; i++) {
+    gameConfig.particles.push({
+      x: x,
+      y: y,
+      size: random(2, 5),
+      speed: random(1, 3),
+      angle: random(TWO_PI),
+      life: 30,
+      color: [100, 150, 255]
+    });
+  }
+}
+
+// En draw():
+function draw() {
+  // ... (tu código actual)
+  
+  // Dibuja partículas
+  gameConfig.particles.forEach((p, i) => {
+    fill(p.color);
+    noStroke();
+    circle(
+      p.x + cos(p.angle) * p.speed * (30 - p.life),
+      p.y + sin(p.angle) * p.speed * (30 - p.life),
+      p.size
+    );
+    p.life--;
+    if (p.life <= 0) gameConfig.particles.splice(i, 1);
+  });
+}
+
+
+
+### ?? **2. Explosión (al hundir un barco)**
+**Técnica**: Partículas + efecto de onda expansiva.
+```javascript
+function drawExplosion(x, y) {
+  // Partículas
+  for (let i = 0; i < 30; i++) {
+    gameConfig.particles.push({
+      x: x,
+      y: y,
+      size: random(3, 8),
+      speed: random(2, 5),
+      angle: random(TWO_PI),
+      life: 40,
+      color: [255, 150 + random(100), 0]
+    });
+  }
+  
+  // Onda expansiva
+  gameConfig.animations.push({
+    type: 'explosion',
+    x: x,
+    y: y,
+    radius: 5,
+    maxRadius: 30,
+    alpha: 200
+  });
+}
+
+
+
+### ?? **3. Oscurecer Pantalla al Perder**
+**Técnica**: Superponer un rectángulo semitransparente.
+```javascript
+function draw() {
+  // ... (tu código actual)
+  
+  if (gameConfig.gameOver && !gameConfig.victory) {
+    fill(0, 0, 0, 150); // Negro con 60% opacidad
+    rect(0, 0, width, height);
+    textSize(40);
+    fill(255);
+    text("¡DERROTA!", width/2, height/2);
+  }
+}
+
+
+
+
+### ?? **4. Confetti en Victoria**
+**Técnica**: Partículas coloridas con gravedad simulada.
+```javascript
+function drawConfetti() {
+  for (let i = 0; i < 50; i++) {
+    gameConfig.particles.push({
+      x: random(width),
+      y: -20,
+      size: random(5, 10),
+      speedY: random(1, 3),
+      speedX: random(-1, 1),
+      color: [random(255), random(255), random(255)],
+      life: 100
+    });
+  }
+}
+
+
+
+### ?? **Implementación Paso a Paso**
+1. **Declara un array para almacenar partículas/animaciones** (en `gameConfig`):
+   ```javascript
+   gameConfig.particles = [];
+   gameConfig.animations = [];
+   ```
+
+2. **Llama a los efectos cuando ocurran eventos**:
+   ```javascript
+   // Al fallar un disparo:
+   if (cellValue === '-') {
+     drawWaterSplash(mouseX, mouseY);
+   }
+
+   // Al hundir un barco:
+   if (cellValue === 'O') {
+     drawExplosion(mouseX, mouseY);
+   }
+
+   // Al ganar:
+   if (victory) {
+     drawConfetti();
+   }
+   ```
+
+3. **Actualiza y dibuja en cada frame**:
+   ```javascript
+   function draw() {
+     clear();
+     
+     // Dibuja tableros y lógica existente
+     drawBoards();
+     
+     // Dibuja efectos
+     drawParticles();
+     drawAnimations();
+   }
+
