@@ -14,8 +14,8 @@ const gameConfig = {
   blinkEffect: {},
   lastBlinkCleanup: 0,
   inventory: [],
-   protectedCells: [],
-   enemyShipsTotal: 0
+  protectedCells: [],
+  enemyShipsTotal: 0
 };
 
 const gameStats = {
@@ -49,18 +49,18 @@ function preload() {
   sounds.enemyHit = loadSound('assets/sounds/impactoIA.mp3');
   sounds.water = loadSound('assets/sounds/agua.mp3');
   sounds.placeShip = loadSound('assets/sounds/colocarBarco.mp3');
-  
+
   //sounds.radar =loadSound(Assets/sounds/radar.mp3)
 }
 
 function setup() {
   createCanvas(800, 340).parent('game-container');
   textAlign(CENTER, CENTER);
-  
+
   setupEventListeners();
   initializeBoards();
   drawBoards();
-  
+
   userStartAudio();
   frameRate(30);
 }
@@ -71,47 +71,47 @@ function setupEventListeners() {
   document.getElementById('btn-start-manual').addEventListener('click', startManualPlacement);
   document.getElementById('btn-reiniciar-victoria').addEventListener('click', resetGame);
   document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
-    //document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
+  //document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
 
-  document.getElementById('btn-stats-end').addEventListener('click', function() {
+  document.getElementById('btn-stats-end').addEventListener('click', function () {
     const statsPanel = document.getElementById('stats-panel');
     statsPanel.classList.toggle('oculto');
-    this.textContent = statsPanel.classList.contains('oculto') 
-        ? 'Ver estadísticas' 
-        : 'Ocultar estadísticas';
-});
+    this.textContent = statsPanel.classList.contains('oculto')
+      ? 'Ver estadísticas'
+      : 'Ocultar estadísticas';
+  });
 }
 
 function initializeBoards() {
 
-    // Inicializar con valores por defecto si no existen
-    gameConfig.boardSize = gameConfig.boardSize || 8;
-    gameConfig.cellSize = gameConfig.cellSize || 40;
+  // Inicializar con valores por defecto si no existen
+  gameConfig.boardSize = gameConfig.boardSize || 8;
+  gameConfig.cellSize = gameConfig.cellSize || 40;
 
-    // Crear tableros con validación
-    try {
-        gameConfig.playerBoard = createEmptyBoard(gameConfig.boardSize);
-        gameConfig.enemyBoard = createEmptyBoard(gameConfig.boardSize);
-        
-        // Inicializar contadores relacionados
-        gameConfig.playerShips = gameConfig.playerShips || 0;
-        gameConfig.enemyShips = gameConfig.enemyShips || 0;
-        
-    } catch (error) {
-        console.error("Error al inicializar tableros:", error);
-        // Asignar tableros vacíos como fallback
-        gameConfig.playerBoard = [['-']];
-        gameConfig.enemyBoard = [['-']];
-    }
+  // Crear tableros con validación
+  try {
+    gameConfig.playerBoard = createEmptyBoard(gameConfig.boardSize);
+    gameConfig.enemyBoard = createEmptyBoard(gameConfig.boardSize);
+
+    // Inicializar contadores relacionados
+    gameConfig.playerShips = gameConfig.playerShips || 0;
+    gameConfig.enemyShips = gameConfig.enemyShips || 0;
+
+  } catch (error) {
+    console.error("Error al inicializar tableros:", error);
+    // Asignar tableros vacíos como fallback
+    gameConfig.playerBoard = [['-']];
+    gameConfig.enemyBoard = [['-']];
+  }
 }
 
 function createEmptyBoard(size) {
-    // Validar tamaño del tablero
-    size = Math.max(5, Math.min(size || 8, 10)); // Entre 5 y 10 como límites
-    
-    return Array(size).fill().map(() => 
-        Array(size).fill('-') // '-' representa celda vacía
-    );
+  // Validar tamaño del tablero
+  size = Math.max(5, Math.min(size || 8, 10)); // Entre 5 y 10 como límites
+
+  return Array(size).fill().map(() =>
+    Array(size).fill('-') // '-' representa celda vacía
+  );
 }
 
 function drawBoards() {
@@ -122,45 +122,45 @@ function drawBoards() {
 }
 
 function showScreen(id) {
-    // Ocultar todas las pantallas
-    document.querySelectorAll('.pantalla').forEach(div => {
-        div.classList.add('oculto');
-    });
-    
-    // Mostrar la pantalla solicitada
-    document.getElementById(id).classList.remove('oculto');
+  // Ocultar todas las pantallas
+  document.querySelectorAll('.pantalla').forEach(div => {
+    div.classList.add('oculto');
+  });
+
+  // Mostrar la pantalla solicitada
+  document.getElementById(id).classList.remove('oculto');
 }
 
 function drawBoard(board, x, y, isEnemy) {
   push();
   translate(x, y);
-  
+
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
       let content = isEnemy && board[i][j] === 'O' ? '-' : board[i][j];
-      
+
       // 1. Handle blink effect first (this affects the cell content)
-// Handle blink effect for this cell (verde)
-const blinkKey = `${i},${j}`;
-if (gameConfig.blinkEffect[blinkKey]) {
-  const framesSinceHit = frameCount - gameConfig.blinkEffect[blinkKey];
-  if (framesSinceHit < 10) { // Blink for 10 frames
-    // Efecto de parpadeo verde
-    const pulse = floor(framesSinceHit / 2) % 2;
-    if (pulse === 0) {
-      content = 'B'; // Usamos 'B' para blink verde
-    }
-  }
-}
-      
+      // Handle blink effect for this cell (verde)
+      const blinkKey = `${i},${j}`;
+      if (gameConfig.blinkEffect[blinkKey]) {
+        const framesSinceHit = frameCount - gameConfig.blinkEffect[blinkKey];
+        if (framesSinceHit < 10) { // Blink for 10 frames
+          // Efecto de parpadeo verde
+          const pulse = floor(framesSinceHit / 2) % 2;
+          if (pulse === 0) {
+            content = 'B'; // Usamos 'B' para blink verde
+          }
+        }
+      }
+
       // 2. Set base cell color
       setCellColor(content, i, j);
-      
+
       // 3. Handle protected cell borders (drawn on top of base cell)
       const isProtected = !isEnemy && gameConfig.protectedCells.some(
         cell => cell.row === i && cell.col === j
       );
-      
+
       if (isProtected) {
         stroke(0, 255, 0); // Green border for protected cells
         strokeWeight(2);
@@ -168,13 +168,13 @@ if (gameConfig.blinkEffect[blinkKey]) {
         stroke(0); // Normal black border
         strokeWeight(1);
       }
-      
+
       // 4. Draw the cell rectangle
-      rect(j * gameConfig.cellSize, i * gameConfig.cellSize, 
-           gameConfig.cellSize, gameConfig.cellSize);
+      rect(j * gameConfig.cellSize, i * gameConfig.cellSize,
+        gameConfig.cellSize, gameConfig.cellSize);
     }
   }
-  
+
   pop();
 }
 
@@ -188,7 +188,7 @@ function setCellColor(content, row, col) {
     'P': '#90EE90',   // Protected (light green),
     'B': '#FFFF66'   // Blink verde (verde puro)
   };
-  
+
   fill(colors[content] || '#F4F4F4');
 }
 
@@ -196,8 +196,8 @@ function drawCoordinates() {
   fill(0);
   textSize(12);
   for (let i = 0; i < gameConfig.boardSize; i++) {
-    text(i, i * gameConfig.cellSize + gameConfig.cellSize/2, -10);
-    text(i, -15, i * gameConfig.cellSize + gameConfig.cellSize/2);
+    text(i, i * gameConfig.cellSize + gameConfig.cellSize / 2, -10);
+    text(i, -15, i * gameConfig.cellSize + gameConfig.cellSize / 2);
   }
 }
 
@@ -211,7 +211,7 @@ function showManualConfig() {
   initializeBoards();
 
   // Asegúrate de que el panel de configuración manual esté visible
-document.getElementById('manual-placement').classList.remove('oculto');
+  document.getElementById('manual-placement').classList.remove('oculto');
   document.getElementById('manual-placement').style.display = 'block';
   // Asegúrate de que las pantallas de victoria y derrota estén ocultas
   //document.getElementById('pantalla-victoria').classList.add('oculto');
@@ -228,8 +228,8 @@ function startManualPlacement() {
     alert("Por favor elige entre 3 y 10 barcos");
     return;
   }
-  
-  
+
+
   gameConfig.placingShips = true;
   gameConfig.shipsPlaced = 0;
   gameConfig.shipsToPlace = ships;
@@ -241,8 +241,8 @@ function startManualPlacement() {
 function initGame(mode, shipCount) {
   gameConfig.gameMode = mode;
   initializeBoards();
-  
-  
+
+
 
   gameConfig.playerShips = shipCount;
   gameConfig.enemyShips = shipCount;
@@ -251,14 +251,14 @@ function initGame(mode, shipCount) {
   gameStats.misses = 0;
   gameStats.currentShots = 0;
   gameConfig.enemyShipsTotal = shipCount;
-  
-  if (gameConfig.gameMode !== 'manual') {placeRandomShips(gameConfig.playerBoard, gameConfig.playerShips);} 
+
+  if (gameConfig.gameMode !== 'manual') { placeRandomShips(gameConfig.playerBoard, gameConfig.playerShips); }
   placeRandomShips(gameConfig.enemyBoard, gameConfig.enemyShips);
-  
+
   initRemainingShips(gameConfig.enemyShips);
   updateShipCount();
   gameConfig.isPlayerTurn = true;
-  
+
   startBackgroundMusic();
   drawBoards();
   showScreen('pantalla-juego');
@@ -273,7 +273,7 @@ function placeRandomShips(board, count) {
   while (placed < count) {
     const x = floor(random(gameConfig.boardSize));
     const y = floor(random(gameConfig.boardSize));
-    
+
     if (board[y][x] === '-') {
       board[y][x] = 'O';
       placed++;
@@ -287,17 +287,17 @@ function markHit(row, col) {
 
 function mousePressed() {
   if (!gameConfig.gameMode) return;
-  
+
   const canvasX = mouseX;
   const canvasY = mouseY;
-  
+
   if (canvasX < 0 || canvasY < 0 || canvasX > width || canvasY > height) return;
-  
+
   if (gameConfig.placingShips) {
     handleShipPlacement(canvasX, canvasY);
     return;
   }
-  
+
   if (gameConfig.isPlayerTurn && canvasX > 480) {
     handlePlayerAttack(canvasX, canvasY);
   }
@@ -307,21 +307,21 @@ function handleShipPlacement(canvasX, canvasY) {
   if (canvasX < 480) {
     const col = floor(canvasX / gameConfig.cellSize);
     const row = floor(canvasY / gameConfig.cellSize);
-    
+
     if (isValidCell(row, col) && gameConfig.playerBoard[row][col] === '-') {
       gameConfig.playerBoard[row][col] = 'O';
       gameConfig.shipsPlaced++;
-      
+
       playSound(sounds.placeShip);
       updateShipCount();
-      
+
       if (gameConfig.shipsPlaced >= gameConfig.shipsToPlace) {
         gameConfig.placingShips = false;
         updateStatus("Todos los barcos colocados. Tu turno!");
       } else {
         updateStatus(`Coloca tus barcos (${gameConfig.shipsToPlace - gameConfig.shipsPlaced} restantes)`);
       }
-      
+
       drawBoards();
     }
   }
@@ -330,12 +330,12 @@ function handleShipPlacement(canvasX, canvasY) {
 function handlePlayerAttack(canvasX, canvasY) {
   const col = floor((canvasX - 480) / gameConfig.cellSize);
   const row = floor(canvasY / gameConfig.cellSize);
-  
+
   if (!isValidCell(row, col)) return;
-  
+
   const cellValue = gameConfig.enemyBoard[row][col];
-  
-   if (cellValue === 'O' || cellValue === 'R') {
+
+  if (cellValue === 'O' || cellValue === 'R') {
     gameConfig.enemyBoard[row][col] = '!';
     markHit(row, col);
     gameConfig.enemyShips--; // ← Esto ya está correcto
@@ -349,9 +349,9 @@ function handlePlayerAttack(canvasX, canvasY) {
   } else {
     return;
   }
-  
+
   checkGameEnd('enemy');
-  
+
   if (gameConfig.doubleShot) {
     gameConfig.doubleShot = false;
     updateStatus("¡Disparo doble activado! Puedes disparar una vez más.");
@@ -370,24 +370,24 @@ function handlePlayerAttack(canvasX, canvasY) {
     gameStats.currentShots++;
     gameStats.totalShots++;
   }
-  
+
   updateStats();
-  
+
   updateShipCount();
   drawBoards();
 }
 
 function isValidCell(row, col) {
-  return row >= 0 && row < gameConfig.boardSize && 
-         col >= 0 && col < gameConfig.boardSize;
+  return row >= 0 && row < gameConfig.boardSize &&
+    col >= 0 && col < gameConfig.boardSize;
 }
 
 function aiTurn() {
   const attackCount = Math.random() < 0.6 ? 2 : 1; // 30% de chance de 2 ataques
-  
+
   // Primer ataque inmediato
   performAIAttack();
-  
+
   // Segundo ataque con retraso (si aplica)
   if (attackCount === 2) {
     updateStatus("¡La IA está preparando un ataque doble!");
@@ -408,21 +408,21 @@ function performAIAttack() {
   let x, y;
   let attempts = 0;
   const maxAttempts = 50;
-  
+
   do {
     x = floor(random(gameConfig.boardSize));
     y = floor(random(gameConfig.boardSize));
     attempts++;
   } while (
-    (['X', '!'].includes(gameConfig.playerBoard[y][x]) || 
-     isCellProtected(y, x) ||
-     lastAttackPositions.some(pos => pos.x === x && pos.y === y)) && 
+    (['X', '!'].includes(gameConfig.playerBoard[y][x]) ||
+      isCellProtected(y, x) ||
+      lastAttackPositions.some(pos => pos.x === x && pos.y === y)) &&
     attempts < maxAttempts
   );
-  
-  lastAttackPositions.push({x, y});
+
+  lastAttackPositions.push({ x, y });
   processAttackResult(y, x);
-  
+
   updateShipCount();
 
   // Limpiar después del turno
@@ -443,11 +443,11 @@ function processAttackResult(row, col) {
     gameConfig.playerBoard[row][col] = 'X';
     updateStatus("¡Defensa electrónica ha bloqueado un ataque enemigo!");
     gameConfig.playerBoard[y][x] = 'X'; // Marcar como ataque fallido
-     gameStats.misses++;
+    gameStats.misses++;
     gameStats.currentShots++;
     gameStats.totalShots++;
     playSound(sounds.water);
-  } 
+  }
   else if (gameConfig.playerBoard[row][col] === 'O') {
     gameConfig.playerBoard[row][col] = '!';
     markHit(row, col);
@@ -465,27 +465,25 @@ function processAttackResult(row, col) {
     updateStatus("La IA ha atacado y falló");
     playSound(sounds.water);
   }
+  
 }
 
 function checkGameEnd(loser) {
-
-  /*
-    const isVictory = loser === 'enemy';
-  
-  if (isVictory) {
-    gameStats.wins++;
-    gameStats.gamesPlayed++;
-  } else {
-    gameStats.gamesPlayed++;
-  }
-  */ 
-
-  const shipsLeft = loser === 'player' ? gameConfig.playerShips : gameConfig.enemyShips;
+const shipsLeft = loser === 'player' ? gameConfig.playerShips : gameConfig.enemyShips;
   
   if (shipsLeft <= 0) {
     const isVictory = loser === 'enemy';
+    
+    // Actualizar estadísticas
+    gameStats.gamesPlayed++;
+    if (isVictory) {
+      gameStats.wins++;
+    }
+    
+    
+    
     updateStatus(isVictory ? "¡Felicidades! Has ganado el juego." : 
-                  "¡La IA ha ganado! Mejor suerte la próxima vez.");
+                "¡La IA ha ganado! Mejor suerte la próxima vez.");
     
     stopBackgroundMusic();
     playSound(isVictory ? sounds.victory : sounds.defeat);
@@ -514,7 +512,7 @@ function tryGetItem() {
     // Calcular total para normalización
     const total = Object.values(itemRarities).reduce((sum, val) => sum + val, 0);
     let random = Math.random() * total;
-    
+
     // Seleccionar ítem basado en peso
     let selectedItem;
     for (const [item, weight] of Object.entries(itemRarities)) {
@@ -539,12 +537,12 @@ function updateStatus(message) {
 function updateShipCount() {
   const playerShipsDisplay = gameConfig.playerShips > 0 ? gameConfig.playerShips : 0;
   const enemyShipsDisplay = gameConfig.enemyShips > 0 ? gameConfig.enemyShips : 0;
-  
-  document.getElementById('ship-count').textContent = 
+
+  document.getElementById('ship-count').textContent =
     `Tus barcos: ${playerShipsDisplay} | Barcos enemigos: ${enemyShipsDisplay}`;
-  
+
   // Actualizar estadísticas de hundimientos
-  document.getElementById('stats-sunk').textContent = 
+  document.getElementById('stats-sunk').textContent =
     gameConfig.enemyShipsTotal - enemyShipsDisplay;
 }
 
@@ -585,7 +583,7 @@ function draw() {
 function showMessage(text) {
   const status = document.getElementById('status');
   if (!status) return;
-  
+
   status.textContent = text;
 
   setTimeout(() => {
@@ -594,51 +592,51 @@ function showMessage(text) {
 }
 
 function resetGame() {
-    // 1. Stop all audio and clear any intervals
-    stopBackgroundMusic();
-    
-    // 2. Completely reset game state
-    gameConfig.playerShips = 0;
-    gameConfig.enemyShips = 0;
-    gameConfig.gameMode = '';
-    gameConfig.isPlayerTurn = true;
-    gameConfig.placingShips = false;
-    gameConfig.shipsToPlace = 0;
-    gameConfig.shipsPlaced = 0;
-    gameConfig.doubleShot = false;
-    gameConfig.predictionTurns = 0; // If using prediction feature
-    gameConfig.turnNumber = 0; // If tracking turns
-    
-    // Reset arrays/objects by creating new instances
-    gameConfig.remainingShips = [];
-    gameConfig.inventory = [];
-    gameConfig.protectedCells = [];
-    gameConfig.blinkEffect = {};
-    gameConfig.lastBlinkCleanup = 0;
-    
-    // 3. Reinitialize boards (using direct implementation)
-    gameConfig.playerBoard = Array(gameConfig.boardSize).fill()
-                          .map(() => Array(gameConfig.boardSize).fill('-'));
-    gameConfig.enemyBoard = Array(gameConfig.boardSize).fill()
-                         .map(() => Array(gameConfig.boardSize).fill('-'));
-    
-    // 4. Reset UI
-    updateStatus("Selecciona un modo de juego");
-    updateShipCount();
-    updateInventoryUI();
-    showScreen('pantalla-inicio');
-    
-    // 5. Redraw boards
-    drawBoards();
-    
-    // 6. Safe sound play
-    try {
-        if (sounds.buttonClick && !sounds.buttonClick.isPlaying()) {
-            sounds.buttonClick.play();
-        }
-    } catch (e) {
-        console.error("Error playing reset sound:", e);
+  // 1. Stop all audio and clear any intervals
+  stopBackgroundMusic();
+
+  // 2. Completely reset game state
+  gameConfig.playerShips = 0;
+  gameConfig.enemyShips = 0;
+  gameConfig.gameMode = '';
+  gameConfig.isPlayerTurn = true;
+  gameConfig.placingShips = false;
+  gameConfig.shipsToPlace = 0;
+  gameConfig.shipsPlaced = 0;
+  gameConfig.doubleShot = false;
+  gameConfig.predictionTurns = 0; // If using prediction feature
+  gameConfig.turnNumber = 0; // If tracking turns
+
+  // Reset arrays/objects by creating new instances
+  gameConfig.remainingShips = [];
+  gameConfig.inventory = [];
+  gameConfig.protectedCells = [];
+  gameConfig.blinkEffect = {};
+  gameConfig.lastBlinkCleanup = 0;
+
+  // 3. Reinitialize boards (using direct implementation)
+  gameConfig.playerBoard = Array(gameConfig.boardSize).fill()
+    .map(() => Array(gameConfig.boardSize).fill('-'));
+  gameConfig.enemyBoard = Array(gameConfig.boardSize).fill()
+    .map(() => Array(gameConfig.boardSize).fill('-'));
+
+  // 4. Reset UI
+  updateStatus("Selecciona un modo de juego");
+  updateShipCount();
+  updateInventoryUI();
+  showScreen('pantalla-inicio');
+
+  // 5. Redraw boards
+  drawBoards();
+
+  // 6. Safe sound play
+  try {
+    if (sounds.buttonClick && !sounds.buttonClick.isPlaying()) {
+      sounds.buttonClick.play();
     }
+  } catch (e) {
+    console.error("Error playing reset sound:", e);
+  }
 }
 
 function getItemName(code) {
@@ -654,9 +652,9 @@ function getItemName(code) {
 function updateInventoryUI() {
   const container = document.getElementById('inventario-items');
   if (!container) return;
-  
+
   container.innerHTML = '';
-  
+
   gameConfig.inventory.forEach(item => {
     const itemEl = document.createElement('div');
     itemEl.className = 'item-inventario';
@@ -667,13 +665,13 @@ function updateInventoryUI() {
       </div>
     `;
     itemEl.title = getItemDescription(item);
-    
+
     itemEl.addEventListener('click', () => {
       if (gameConfig.isPlayerTurn && gameConfig.gameMode) {
         useItem(item);
       }
     });
-    
+
     container.appendChild(itemEl);
   });
 }
@@ -700,8 +698,8 @@ function getItemDescription(code) {
 
 function useItem(item) {
   let used = false;
-  
-  switch(item) {
+
+  switch (item) {
     case 'radar':
       used = revealRandomShip();
       break;
@@ -730,7 +728,7 @@ function useItem(item) {
     default:
       updateStatus("Item desconocido.");
   }
-  
+
   if (used) {
     const index = gameConfig.inventory.indexOf(item);
     if (index > -1) {
@@ -742,24 +740,24 @@ function useItem(item) {
 
 function revealRandomShip() {
   const hiddenShips = [];
-  
+
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
       if (gameConfig.enemyBoard[i][j] === 'O') {
-        hiddenShips.push({row: i, col: j});
+        hiddenShips.push({ row: i, col: j });
       }
     }
   }
-  
+
   if (hiddenShips.length > 0) {
     const ship = hiddenShips[floor(random(hiddenShips.length))];
     gameConfig.enemyBoard[ship.row][ship.col] = 'R';
-    
+
     updateStatus("¡Radar activado! Se ha revelado un barco enemigo.");
     drawBoards();
     return true;
   }
-  
+
   updateStatus("No hay barcos enemigos para revelar.");
   return false;
 }
@@ -767,16 +765,16 @@ function revealRandomShip() {
 function revealRandomPositions() {
   // Encontrar celdas no reveladas en el tablero enemigo
   const hiddenCells = [];
-  
+
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
       // Solo considerar celdas que no han sido atacadas/reveladas y no son barcos ya revelados
       if (gameConfig.enemyBoard[i][j] === '-' || gameConfig.enemyBoard[i][j] === 'O') {
-        hiddenCells.push({row: i, col: j});
+        hiddenCells.push({ row: i, col: j });
       }
     }
   }
-  
+
   if (hiddenCells.length === 0) {
     updateStatus("No hay posiciones para revelar");
     return false;
@@ -790,7 +788,7 @@ function revealRandomPositions() {
     // Seleccionar una celda aleatoria y removerla del array para no repetir
     const randomIndex = Math.floor(Math.random() * hiddenCells.length);
     const cell = hiddenCells.splice(randomIndex, 1)[0];
-    
+
     // Revelar la posición
     if (gameConfig.enemyBoard[cell.row][cell.col] === 'O') {
       gameConfig.enemyBoard[cell.row][cell.col] = 'R'; // Barco revelado
@@ -829,32 +827,32 @@ function useRadar() {
 function protectRandomCells() {
   // Limpiar protección anterior
   gameConfig.protectedCells = [];
-  
+
   // Encontrar celdas válidas para proteger (que no hayan sido atacadas y no estén ya protegidas)
   const validCells = [];
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
       if (gameConfig.playerBoard[i][j] === '-' || gameConfig.playerBoard[i][j] === 'O') {
-        validCells.push({row: i, col: j});
+        validCells.push({ row: i, col: j });
       }
     }
   }
-  
+
   // Si no hay suficientes celdas, no hacer nada
   if (validCells.length < 2) {
     return false;
   }
-  
+
   // Seleccionar 2 celdas aleatorias
   for (let i = 0; i < 2; i++) {
     const randomIndex = Math.floor(Math.random() * validCells.length);
     const cell = validCells.splice(randomIndex, 1)[0];
     gameConfig.protectedCells.push(cell);
-    
+
     // Marcar visualmente la celda como protegida (usaremos 'P' temporalmente)
     gameConfig.playerBoard[cell.row][cell.col] = 'P';
   }
-  
+
   return true;
 }
 
@@ -862,7 +860,7 @@ function removeProtection() {
   gameConfig.protectedCells.forEach(cell => {
     // Restaurar el valor original de la celda
     if (gameConfig.playerBoard[cell.row][cell.col] === 'P') {
-      gameConfig.playerBoard[cell.row][cell.col] = 
+      gameConfig.playerBoard[cell.row][cell.col] =
         gameConfig.playerBoard[cell.row][cell.col] === 'O' ? 'O' : '-';
     }
   });
@@ -871,15 +869,15 @@ function removeProtection() {
 
 function cleanOldBlinks() {
   const currentFrame = frameCount;
-  
+
   // Check if we need to clean up (limit how often we do this for performance)
   if (currentFrame - gameConfig.lastBlinkCleanup < 10) {
     return;
   }
-  
+
   // Track if we removed any blinks
   let removedAny = false;
-  
+
   // Clean up old blink effects
   for (const key in gameConfig.blinkEffect) {
     if (currentFrame - gameConfig.blinkEffect[key] > 10) { // 10 frames = ~0.33 seconds at 30fps
@@ -887,7 +885,7 @@ function cleanOldBlinks() {
       removedAny = true;
     }
   }
-  
+
   // Update last cleanup time if we actually did something
   if (removedAny) {
     gameConfig.lastBlinkCleanup = currentFrame;
@@ -901,12 +899,13 @@ function markHit(row, col) {
 
 
 function updateStats() {
-  const currentAccuracy = gameStats.currentShots > 0 
+ const currentAccuracy = gameStats.currentShots > 0 
     ? Math.round((gameStats.hits / gameStats.currentShots) * 100) 
     : 0;
   
+  // Cálculo más lógico para precisión total:
   const totalAccuracy = gameStats.totalShots > 0
-    ? Math.round(((gameStats.wins * gameConfig.enemyShipsTotal) / gameStats.totalShots) * 100)
+    ? Math.round((gameStats.hits / gameStats.totalShots) * 100)
     : 0;
 
   document.getElementById('stats-shots').textContent = gameStats.currentShots;
