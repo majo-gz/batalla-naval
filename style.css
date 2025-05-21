@@ -1,5 +1,16 @@
+
+@font-face {
+  font-family: 'FuenteTitulo';
+  src: url('assets/fonts/tittle.otf') format('opentype');
+}
+/*
+@font-face {
+  font-family: 'FuenteCuerpo';
+  src: url('assets/fonts/body.ttf') format('truetype');
+}*/
+
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: 'Times New Roman', sans-serif;
     background-color: #1a2f4b;
     color: #fff;
     margin: 0;
@@ -8,6 +19,33 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+}
+
+h1 {
+  font-family: 'FuenteTitulo', serif;
+  font-size: 72px;
+  font-weight: 100;
+  color: #fff;
+  margin-bottom: 0.5em;
+   letter-spacing: 2.5px; 
+}
+
+ h2 {
+  font-family: 'FuenteTitulo', serif;
+  font-size: 24px;
+  font-weight: 100;
+  color: #fff;
+  margin-bottom: 0.5em;
+   letter-spacing: 2.5px; 
+}
+
+h3, h4, h5, h6 {
+  font-family: 'Times New Roman', sans-serif;
+  font-weight: bold;
+  font-weight: 100;
+  color: #fff;
+  margin-bottom: 0.5em;
+   letter-spacing: 2.5px; 
 }
 
 .game-wrapper {
@@ -33,6 +71,7 @@ body {
 
 .game-button {
     background-color: #3498db;
+    font-family: 'Times New Roman', sans-serif;
     color: white;
     border: none;
     padding: 12px 25px;
