@@ -661,6 +661,11 @@ function updateShipCount() {
   // Actualizar estadísticas de hundimientos
   document.getElementById('stats-sunk').textContent =
     gameConfig.enemyShipsTotal - enemyShipsDisplay;
+
+      // Actualizar probabilidad
+  const probability = calculateHitProbability();
+  document.getElementById('probability-display').textContent = 
+    `Probabilidad de impacto: ${probability}%`;
 }
 
 function startBackgroundMusic() {
@@ -1143,4 +1148,39 @@ function mostrarFinDelJuego(resultado) {
   
   // Detener música de fondo
   stopBackgroundMusic();
+}
+
+function calculateHitProbability() {
+  // Contar celdas no reveladas y barcos restantes
+  let hiddenCells = 0;
+  let revealedShips = 0;
+  
+  for (let i = 0; i < gameConfig.boardSize; i++) {
+    for (let j = 0; j < gameConfig.boardSize; j++) {
+      const cellValue = gameConfig.enemyBoard[i][j];
+      
+      if (cellValue === '-' || cellValue === 'O') {
+        hiddenCells++;
+      }
+      if (cellValue === 'R' || cellValue === '!') {
+        revealedShips++;
+      }
+    }
+  }
+  
+  const remainingShips = gameConfig.enemyShipsTotal - revealedShips;
+  
+  // Evitar división por cero
+  if (hiddenCells === 0 || remainingShips <= 0) {
+    return 0;
+  }
+  
+  // Probabilidad básica (barcos restantes / celdas ocultas)
+  let probability = (remainingShips / hiddenCells) * 100;
+  
+  // Ajustar probabilidad basada en barcos encontrados
+  const hitRatio = revealedShips / gameConfig.enemyShipsTotal;
+  probability *= (1 + hitRatio * 0.5); // Aumentar probabilidad si ya hemos encontrado barcos
+  
+  return Math.min(Math.round(probability), 100); // Limitar a 100%
 }

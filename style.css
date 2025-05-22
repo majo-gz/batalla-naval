@@ -268,7 +268,6 @@ h3, h4, h5, h6 {
     }
 }
 
-<<<<<<< HEAD
 #notificacion-pantalla {
   position: fixed;
   top: 0;
@@ -348,18 +347,11 @@ h3, h4, h5, h6 {
 @keyframes neon-float {
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-10px) scale(1.03); }
-=======
-/* Asegúrate que ambos botones tengan el mismo estilo */
-#btn-stats-end, #btn-reiniciar {
-  margin: 10px;
-  padding: 10px 20px;
 }
 
-/* El panel de estadísticas debe mostrarse igual en ambas pantallas */
-.end-screen #stats-panel {
-  background: rgba(0, 0, 0, 0.8);
-  padding: 20px;
-  border-radius: 10px;
-  margin-top: 20px;
->>>>>>> cb9cbc2474a99c6cc93711d5bdc26e3e6339ef99
+.probability-counter {
+  margin: 10px 0;
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
 }
