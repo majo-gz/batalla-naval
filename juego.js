@@ -19,7 +19,9 @@ const gameConfig = {
 };
 
 const gameStats = {
-  hits: 0,          // Disparos acertados
+  hits: 0,
+    itemsUsed: {}, // Nuevo: contador por ítem
+  turns: 0,          // Disparos acertados
   misses: 0,        // Disparos fallados
   gamesPlayed: 0,   // Partidas jugadas
   wins: 0,          // Partidas ganadas
@@ -78,9 +80,16 @@ function setupEventListeners() {
   document.getElementById('btn-rapido').addEventListener('click', startQuickGame);
   document.getElementById('btn-manual').addEventListener('click', showManualConfig);
   document.getElementById('btn-start-manual').addEventListener('click', startManualPlacement);
-  document.getElementById('btn-reiniciar-victoria').addEventListener('click', resetGame);
-  document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
+  document.getElementById('btn-new-game').addEventListener('click', resetGame);
   //document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
+
+  //document.getElementById('btn-stats-end').addEventListener('click', function () {
+  //const statsPanel = document.getElementById('stats-panel');
+  //statsPanel.classList.toggle('oculto');
+  //this.textContent = statsPanel.classList.contains('oculto')
+  //? 'Ver estadísticas'
+  //: 'Ocultar estadísticas';
+  //});
 
   document.getElementById('btn-stats-end').addEventListener('click', function () {
     const statsPanel = document.getElementById('stats-panel');
@@ -428,6 +437,8 @@ function handlePlayerAttack(canvasX, canvasY) {
   const col = floor((canvasX - 480) / gameConfig.cellSize);
   const row = floor(canvasY / gameConfig.cellSize);
 
+  gameStats.turns++;
+
   if (!isValidCell(row, col)) return;
 
   const cellValue = gameConfig.enemyBoard[row][col];
@@ -436,6 +447,7 @@ function handlePlayerAttack(canvasX, canvasY) {
     gameConfig.enemyBoard[row][col] = '!';
     markHit(row, col);
     gameConfig.enemyShips--; // ← Esto ya está correcto
+    gameStats.hits++;
     updateShipCount();
     updateStatus("¡Impacto! Has hundido un barco enemigo.");
     playSound(sounds.playerHit);
@@ -480,7 +492,7 @@ function isValidCell(row, col) {
 }
 
 function aiTurn() {
-  const attackCount = Math.random() < 0.6 ? 2 : 1; // 30% de chance de 2 ataques
+  const attackCount = Math.random() < 0.9 ? 2 : 1; // 30% de chance de 2 ataques
 
   // Primer ataque inmediato
   performAIAttack();
@@ -562,30 +574,35 @@ function processAttackResult(row, col) {
     updateStatus("La IA ha atacado y falló");
     playSound(sounds.water);
   }
-  
+
 }
 
 function checkGameEnd(loser) {
-const shipsLeft = loser === 'player' ? gameConfig.playerShips : gameConfig.enemyShips;
-  
+  const shipsLeft = loser === 'player' ? gameConfig.playerShips : gameConfig.enemyShips;
+
   if (shipsLeft <= 0) {
     const isVictory = loser === 'enemy';
+    const endScreenId = isVictory ? 'pantalla-victoria' : 'pantalla-derrota';
+
+       // Configurar mensaje y sonido
+    updateStatus(isVictory ? "¡Felicidades! Has ganado el juego." :
+      "¡La IA ha ganado! Mejor suerte la próxima vez.");
+    playSound(isVictory ? sounds.victory : sounds.defeat);
     
+    stopBackgroundMusic();
+    updateStats();
     // Actualizar estadísticas
     gameStats.gamesPlayed++;
     if (isVictory) {
       gameStats.wins++;
+      mostrarFinDelJuego('victoria');
+    } else {
+
+      mostrarFinDelJuego('derrota');
     }
-    
-    
-    
-    updateStatus(isVictory ? "¡Felicidades! Has ganado el juego." : 
-                "¡La IA ha ganado! Mejor suerte la próxima vez.");
-    
-    stopBackgroundMusic();
-    playSound(isVictory ? sounds.victory : sounds.defeat);
-    
-    showScreen(isVictory ? 'pantalla-victoria' : 'pantalla-derrota');
+
+
+ 
   }
 }
 
@@ -601,10 +618,10 @@ function tryGetItem() {
   if (Math.random() < 0.3) { // 30% de chance de obtener un ítem
     // Definir probabilidades (puedes ajustar estos valores)
     const itemRarities = {
-      'doble': 30,
-      'radar': 10,
-      'revelar': 35,
-      'defensa': 25
+      'doble': 5,
+      'radar': 5,
+      'revelar': 85,
+      'defensa': 5
     };
 
     // Calcular total para normalización
@@ -799,7 +816,12 @@ function getItemDescription(code) {
 function useItem(item) {
   let used = false;
 
-  switch(item) {
+  if (!gameStats.itemsUsed[item]) {
+  gameStats.itemsUsed[item] = 0;
+}
+gameStats.itemsUsed[item]++;
+
+  switch (item) {
     case 'radar':
       used = revealRandomShip();
         playSound(sounds.radar);//cambio aquí
@@ -1003,18 +1025,122 @@ function markHit(row, col) {
 
 
 function updateStats() {
- const currentAccuracy = gameStats.currentShots > 0 
-    ? Math.round((gameStats.hits / gameStats.currentShots) * 100) 
-    : 0;
-  
-  // Cálculo más lógico para precisión total:
-  const totalAccuracy = gameStats.totalShots > 0
-    ? Math.round((gameStats.hits / gameStats.totalShots) * 100)
-    : 0;
+  //const currentAccuracy = gameStats.currentShots > 0
+    //? Math.round((gameStats.hits / gameStats.currentShots) * 100)
+    //: 0;
 
-  document.getElementById('stats-shots').textContent = gameStats.currentShots;
-  document.getElementById('stats-accuracy').textContent = `${currentAccuracy}%`;
-  document.getElementById('stats-sunk').textContent = gameConfig.enemyShipsTotal - gameConfig.enemyShips;
-  document.getElementById('stats-wins').textContent = gameStats.wins;
-  document.getElementById('stats-total-accuracy').textContent = `${totalAccuracy}%`;
+  //const totalAccuracy = gameStats.totalShots > 0
+    //? Math.round((gameStats.hits / gameStats.totalShots) * 100)
+    //: 0;
+
+  //document.getElementById('stats-shots').textContent = gameStats.currentShots;
+  //document.getElementById('stats-accuracy').textContent = `${currentAccuracy}%`;
+  //document.getElementById('stats-sunk').textContent = gameConfig.enemyShipsTotal - gameConfig.enemyShips;
+  //document.getElementById('stats-wins').textContent = gameStats.wins;
+  //document.getElementById('stats-total-accuracy').textContent = `${totalAccuracy}%`;
+}
+
+//function generarInformeFinal() {
+  //const { currentShots, hits, itemsUsed, turns } = gameStats;
+  //const accuracy = currentShots > 0 ? Math.round((hits / currentShots) * 100) : 0;
+
+  //const itemNames = {
+    //radar: 'Radar',
+    //doble: 'Doble Disparo',
+    //revelar: 'Revelar Posición',
+    //defensa: 'Defensa Electrónica'
+  //};
+
+  //const usados = Object.keys(itemsUsed).map(item => 
+    //`${itemsUsed[item]}× ${itemNames[item] || item}`
+  //).join(', ') || "Ninguno";
+
+  //const noUsados = Object.keys(itemNames)
+    //.filter(item => !itemsUsed[item])
+    //.map(item => itemNames[item])
+    //.join(', ') || "Ninguno";
+
+  //return `
+//--- Informe Final ---
+//Disparos realizados: ${currentShots}
+//Aciertos: ${hits} (${accuracy}% de precisión)
+//Turnos totales: ${turns}
+//Ítems usados: ${usados}
+//Ítems no usados: ${noUsados}
+//---------------------
+  //`;
+//}
+
+function generarInformeFinal() {
+const { currentShots, hits, itemsUsed, turns } = gameStats;
+const accuracy = currentShots > 0 ? Math.round((hits / currentShots) * 100) : 0;
+
+const itemNames = {
+radar: 'Radar',
+doble: 'Doble Disparo',
+revelar: 'Revelar Posición',
+defensa: 'Defensa Electrónica'
+};
+
+document.getElementById('stats-shots').textContent = currentShots;
+document.getElementById('stats-accuracy').textContent = `${accuracy}%`;
+document.getElementById('stats-sunk').textContent = gameConfig.enemyShipsTotal - gameConfig.enemyShips;
+document.getElementById('stats-wins').textContent = gameStats.wins;
+
+const totalAccuracy = gameStats.totalShots > 0
+? Math.round(((gameStats.wins * gameConfig.enemyShipsTotal) / gameStats.totalShots) * 100)
+: 0;
+document.getElementById('stats-total-accuracy').textContent = `${totalAccuracy}%`;
+
+const usados = Object.keys(itemsUsed).map(item =>
+  `${itemsUsed[item]}× ${itemNames[item] || item}`
+).join(', ') || "Ninguno";
+
+const noUsados = Object.keys(itemNames)
+.filter(item => !itemsUsed[item] || itemsUsed[item] === 0)
+.map(item => itemNames[item])
+.join(', ') || "Ninguno";
+
+const resumen = `
+  <div class="stats-summary">
+    <p><strong>Turnos totales:</strong> ${turns}</p>
+    <p><strong>Ítems usados:</strong> ${usados}</p>
+    <p><strong>Ítems no usados:</strong> ${noUsados}</p>
+  </div>
+`;
+
+let panel = document.getElementById('stats-panel');
+if (panel) {
+const prevSummary = panel.querySelector('.stats-summary');
+if (prevSummary) prevSummary.remove();
+
+panel.insertAdjacentHTML('beforeend', resumen);
+
+}
+
+}
+
+function mostrarFinDelJuego(resultado) {
+  // Ocultar todas las pantallas primero
+  document.querySelectorAll('.pantalla').forEach(div => {
+    div.classList.add('oculto');
+  });
+
+  document.getElementById('pantalla-final').classList.remove('oculto');
+
+  // Mostrar la pantalla final correspondiente
+  if (resultado === 'victoria') {
+    document.getElementById('mensaje-victoria').classList.remove('oculto');
+    gameStats.wins++; // Incrementar contador de victorias
+    playSound(sounds.victory);
+  } else if (resultado === 'derrota') {
+    document.getElementById('mensaje-derrota').classList.remove('oculto');
+    playSound(sounds.defeat);
+  }
+
+  // Actualizar estadísticas
+  generarInformeFinal();
+  
+  // Detener música de fondo
+  stopBackgroundMusic();
 }
