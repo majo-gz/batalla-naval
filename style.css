@@ -267,3 +267,17 @@ h3, h4, h5, h6 {
         flex-direction: column;
     }
 }
+
+/* Asegúrate que ambos botones tengan el mismo estilo */
+#btn-stats-end, #btn-reiniciar {
+  margin: 10px;
+  padding: 10px 20px;
+}
+
+/* El panel de estadísticas debe mostrarse igual en ambas pantallas */
+.end-screen #stats-panel {
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  margin-top: 20px;
+}

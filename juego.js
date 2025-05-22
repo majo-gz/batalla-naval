@@ -69,9 +69,16 @@ function setupEventListeners() {
   document.getElementById('btn-rapido').addEventListener('click', startQuickGame);
   document.getElementById('btn-manual').addEventListener('click', showManualConfig);
   document.getElementById('btn-start-manual').addEventListener('click', startManualPlacement);
-  document.getElementById('btn-reiniciar-victoria').addEventListener('click', resetGame);
-  document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
+  document.getElementById('btn-new-game').addEventListener('click', resetGame);
   //document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
+
+  //document.getElementById('btn-stats-end').addEventListener('click', function () {
+    //const statsPanel = document.getElementById('stats-panel');
+    //statsPanel.classList.toggle('oculto');
+    //this.textContent = statsPanel.classList.contains('oculto')
+      //? 'Ver estadísticas'
+      //: 'Ocultar estadísticas';
+  //});
 
   document.getElementById('btn-stats-end').addEventListener('click', function () {
     const statsPanel = document.getElementById('stats-panel');
@@ -465,30 +472,32 @@ function processAttackResult(row, col) {
     updateStatus("La IA ha atacado y falló");
     playSound(sounds.water);
   }
-  
+
 }
 
 function checkGameEnd(loser) {
-const shipsLeft = loser === 'player' ? gameConfig.playerShips : gameConfig.enemyShips;
-  
+  const shipsLeft = loser === 'player' ? gameConfig.playerShips : gameConfig.enemyShips;
+
   if (shipsLeft <= 0) {
     const isVictory = loser === 'enemy';
-    
+    const endScreenId = isVictory ? 'pantalla-victoria' : 'pantalla-derrota';
+
     // Actualizar estadísticas
     gameStats.gamesPlayed++;
     if (isVictory) {
       gameStats.wins++;
     }
-    
-    
-    
-    updateStatus(isVictory ? "¡Felicidades! Has ganado el juego." : 
-                "¡La IA ha ganado! Mejor suerte la próxima vez.");
-    
-    stopBackgroundMusic();
-    playSound(isVictory ? sounds.victory : sounds.defeat);
-    
-    showScreen(isVictory ? 'pantalla-victoria' : 'pantalla-derrota');
+
+    updateStats();
+
+ // Mostrar pantalla final correcta
+  showScreen(endScreenId);
+  
+  // Configurar mensaje y sonido
+  updateStatus(isVictory ? "¡Felicidades! Has ganado el juego." : 
+              "¡La IA ha ganado! Mejor suerte la próxima vez.");
+  playSound(isVictory ? sounds.victory : sounds.defeat);
+  stopBackgroundMusic();
   }
 }
 
@@ -899,10 +908,10 @@ function markHit(row, col) {
 
 
 function updateStats() {
- const currentAccuracy = gameStats.currentShots > 0 
-    ? Math.round((gameStats.hits / gameStats.currentShots) * 100) 
+  const currentAccuracy = gameStats.currentShots > 0
+    ? Math.round((gameStats.hits / gameStats.currentShots) * 100)
     : 0;
-  
+
   // Cálculo más lógico para precisión total:
   const totalAccuracy = gameStats.totalShots > 0
     ? Math.round((gameStats.hits / gameStats.totalShots) * 100)
