@@ -355,3 +355,42 @@ h3, h4, h5, h6 {
   color: #666;
   font-style: italic;
 }
+
+/* Panel de estadísticas */
+#stats-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #4a90e2;
+  box-shadow: 0 0 20px rgba(74, 144, 226, 0.5);
+  z-index: 1000;
+  width: 300px;
+  max-width: 90%;
+}
+
+#stats-panel.oculto {
+  display: none;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.stats-summary {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #4a90e2;
+}
+
+.stats-summary p {
+  margin: 5px 0;
+  font-size: 14px;
+}

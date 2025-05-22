@@ -90,13 +90,21 @@ function setupEventListeners() {
   //? 'Ver estadísticas'
   //: 'Ocultar estadísticas';
   //});
-
-  document.getElementById('btn-stats-end').addEventListener('click', function () {
+  // Para todos los botones de estadísticas
+  document.querySelectorAll('[id^="btn-stats"]').forEach(btn => {
+    btn.addEventListener('click', toggleStats);
+  });
+  
+  // Cerrar al hacer clic fuera del panel
+  document.addEventListener('click', (e) => {
     const statsPanel = document.getElementById('stats-panel');
-    statsPanel.classList.toggle('oculto');
-    this.textContent = statsPanel.classList.contains('oculto')
-      ? 'Ver estadísticas'
-      : 'Ocultar estadísticas';
+    const isStatsBtn = e.target.closest('[id^="btn-stats"]');
+    
+    if (!statsPanel.classList.contains('oculto') && 
+        !statsPanel.contains(e.target) && 
+        !isStatsBtn) {
+      toggleStats();
+    }
   });
 }
 
@@ -480,7 +488,7 @@ function handlePlayerAttack(canvasX, canvasY) {
     gameStats.totalShots++;
   }
 
-  updateStats();
+  // updateStats();
 
   updateShipCount();
   drawBoards();
@@ -492,7 +500,7 @@ function isValidCell(row, col) {
 }
 
 function aiTurn() {
-  const attackCount = Math.random() < 0.9 ? 2 : 1; // 30% de chance de 2 ataques
+  const attackCount = Math.random() < 0.4 ? 2 : 1;
 
   // Primer ataque inmediato
   performAIAttack();
@@ -590,7 +598,7 @@ function checkGameEnd(loser) {
     playSound(isVictory ? sounds.victory : sounds.defeat);
     
     stopBackgroundMusic();
-    updateStats();
+    // updateStats();
     // Actualizar estadísticas
     gameStats.gamesPlayed++;
     if (isVictory) {
@@ -614,14 +622,25 @@ function startPlayerTurn() {
 }
 
 function tryGetItem() {
-  console.log("Sorteando ítem...");
-  if (Math.random() < 0.3) { // 30% de chance de obtener un ítem
-    // Definir probabilidades (puedes ajustar estos valores)
+  // Probabilidad base de obtener ítem (30%)
+  let baseProbability = 0.3;
+  
+  // Penalización del 5% por cada ítem en el inventario
+  const penaltyPerItem = 0.05;
+  const currentPenalty = gameConfig.inventory.length * penaltyPerItem;
+  
+  // Probabilidad final (base - penalización) con mínimo del 5%
+  const finalProbability = Math.max(baseProbability - currentPenalty, 0.05);
+  
+  console.log(`Probabilidad de ítem: ${(finalProbability * 100).toFixed(1)}% (Base: 30% - Penalización: ${(currentPenalty * 100).toFixed(1)}%)`);
+
+  if (Math.random() < finalProbability) {
+    // Definir probabilidades de tipos de ítem
     const itemRarities = {
-      'doble': 5,
-      'radar': 5,
-      'revelar': 85,
-      'defensa': 5
+      'doble': 30,
+      'radar': 10,
+      'revelar': 35,
+      'defensa': 25
     };
 
     // Calcular total para normalización
@@ -638,12 +657,20 @@ function tryGetItem() {
       random -= weight;
     }
 
+    // Lógica de inventario limitado (máximo 5 ítems)
+    if (gameConfig.inventory.length >= 5) {
+      const removedItem = gameConfig.inventory.shift(); // Elimina el más antiguo
+      mostrarNotificacion(`Inventario lleno! Se descartó: ${getItemName(removedItem)}`, 2000);
+    }
+
+    // Añadir el nuevo ítem
     gameConfig.inventory.push(selectedItem);
-    mostrarNotificacion(`✨¡Has obtenido un ítem: ${getItemName(selectedItem)}!✨`, 2000);
+    mostrarNotificacion(`✨¡Has obtenido: ${getItemName(selectedItem)}! (${gameConfig.inventory.length}/5)✨`, 2000);
     playSound(sounds.item);
-    console.log(`Item obtenido: ${selectedItem} (Rareza: ${itemRarities[selectedItem]}%)`);
-    showMessage(`¡Has obtenido un ítem: ${getItemName(selectedItem)}!`);
     updateInventoryUI();
+    
+    // Actualizar visualización de probabilidad
+    updateProbabilityDisplay();
   }
 }
 
@@ -1029,100 +1056,74 @@ function markHit(row, col) {
 }
 
 
-function updateStats() {
-  //const currentAccuracy = gameStats.currentShots > 0
-    //? Math.round((gameStats.hits / gameStats.currentShots) * 100)
-    //: 0;
-
-  //const totalAccuracy = gameStats.totalShots > 0
-    //? Math.round((gameStats.hits / gameStats.totalShots) * 100)
-    //: 0;
-
-  //document.getElementById('stats-shots').textContent = gameStats.currentShots;
-  //document.getElementById('stats-accuracy').textContent = `${currentAccuracy}%`;
-  //document.getElementById('stats-sunk').textContent = gameConfig.enemyShipsTotal - gameConfig.enemyShips;
-  //document.getElementById('stats-wins').textContent = gameStats.wins;
-  //document.getElementById('stats-total-accuracy').textContent = `${totalAccuracy}%`;
+// Función para mostrar/ocultar el panel de estadísticas
+function toggleStats() {
+  const statsPanel = document.getElementById('stats-panel');
+  const isHidden = statsPanel.classList.contains('oculto');
+  
+  // Actualizar texto de todos los botones de estadísticas
+  document.querySelectorAll('[id^="btn-stats"]').forEach(btn => {
+    btn.textContent = isHidden ? 'Ocultar estadísticas' : 'Ver estadísticas';
+  });
+  
+  // Alternar visibilidad del panel
+  statsPanel.classList.toggle('oculto');
+  
+  // Generar el informe solo cuando se muestra el panel
+  if (isHidden) {
+    generarInformeFinal();
+  }
 }
 
-//function generarInformeFinal() {
-  //const { currentShots, hits, itemsUsed, turns } = gameStats;
-  //const accuracy = currentShots > 0 ? Math.round((hits / currentShots) * 100) : 0;
-
-  //const itemNames = {
-    //radar: 'Radar',
-    //doble: 'Doble Disparo',
-    //revelar: 'Revelar Posición',
-    //defensa: 'Defensa Electrónica'
-  //};
-
-  //const usados = Object.keys(itemsUsed).map(item => 
-    //`${itemsUsed[item]}× ${itemNames[item] || item}`
-  //).join(', ') || "Ninguno";
-
-  //const noUsados = Object.keys(itemNames)
-    //.filter(item => !itemsUsed[item])
-    //.map(item => itemNames[item])
-    //.join(', ') || "Ninguno";
-
-  //return `
-//--- Informe Final ---
-//Disparos realizados: ${currentShots}
-//Aciertos: ${hits} (${accuracy}% de precisión)
-//Turnos totales: ${turns}
-//Ítems usados: ${usados}
-//Ítems no usados: ${noUsados}
-//---------------------
-  //`;
-//}
-
+// Tu función generarInformeFinal() con pequeñas adaptaciones
 function generarInformeFinal() {
-const { currentShots, hits, itemsUsed, turns } = gameStats;
-const accuracy = currentShots > 0 ? Math.round((hits / currentShots) * 100) : 0;
+  const { currentShots, hits, itemsUsed, turns } = gameStats;
+  const accuracy = currentShots > 0 ? Math.round((hits / currentShots) * 100) : 0;
 
-const itemNames = {
-radar: 'Radar',
-doble: 'Doble Disparo',
-revelar: 'Revelar Posición',
-defensa: 'Defensa Electrónica'
-};
+  const itemNames = {
+    radar: 'Radar',
+    doble: 'Doble Disparo',
+    revelar: 'Revelar Posición',
+    defensa: 'Defensa Electrónica'
+  };
 
-document.getElementById('stats-shots').textContent = currentShots;
-document.getElementById('stats-accuracy').textContent = `${accuracy}%`;
-document.getElementById('stats-sunk').textContent = gameConfig.enemyShipsTotal - gameConfig.enemyShips;
-document.getElementById('stats-wins').textContent = gameStats.wins;
+  // Actualizar estadísticas básicas
+  document.getElementById('stats-shots').textContent = currentShots;
+  document.getElementById('stats-accuracy').textContent = `${accuracy}%`;
+  document.getElementById('stats-sunk').textContent = gameConfig.enemyShipsTotal - gameConfig.enemyShips;
+  document.getElementById('stats-wins').textContent = gameStats.wins;
 
-const totalAccuracy = gameStats.totalShots > 0
-? Math.round(((gameStats.wins * gameConfig.enemyShipsTotal) / gameStats.totalShots) * 100)
-: 0;
-document.getElementById('stats-total-accuracy').textContent = `${totalAccuracy}%`;
+  // Calcular precisión total
+  const totalAccuracy = gameStats.totalShots > 0
+    ? Math.round(((gameStats.wins * gameConfig.enemyShipsTotal) / gameStats.totalShots) * 100)
+    : 0;
+  document.getElementById('stats-total-accuracy').textContent = `${totalAccuracy}%`;
 
-const usados = Object.keys(itemsUsed).map(item =>
-  `${itemsUsed[item]}× ${itemNames[item] || item}`
-).join(', ') || "Ninguno";
+  // Procesar ítems usados y no usados
+  const usados = Object.keys(itemsUsed).map(item =>
+    `${itemsUsed[item]}× ${itemNames[item] || item}`
+  ).join(', ') || "Ninguno";
 
-const noUsados = Object.keys(itemNames)
-.filter(item => !itemsUsed[item] || itemsUsed[item] === 0)
-.map(item => itemNames[item])
-.join(', ') || "Ninguno";
+  const noUsados = Object.keys(itemNames)
+    .filter(item => !itemsUsed[item] || itemsUsed[item] === 0)
+    .map(item => itemNames[item])
+    .join(', ') || "Ninguno";
 
-const resumen = `
-  <div class="stats-summary">
-    <p><strong>Turnos totales:</strong> ${turns}</p>
-    <p><strong>Ítems usados:</strong> ${usados}</p>
-    <p><strong>Ítems no usados:</strong> ${noUsados}</p>
-  </div>
-`;
+  // Crear sección de resumen
+  const resumen = `
+    <div class="stats-summary">
+      <p><strong>Turnos totales:</strong> ${turns}</p>
+      <p><strong>Ítems usados:</strong> ${usados}</p>
+      <p><strong>Ítems no usados:</strong> ${noUsados}</p>
+    </div>
+  `;
 
-let panel = document.getElementById('stats-panel');
-if (panel) {
-const prevSummary = panel.querySelector('.stats-summary');
-if (prevSummary) prevSummary.remove();
-
-panel.insertAdjacentHTML('beforeend', resumen);
-
-}
-
+  // Insertar resumen en el panel
+  const panel = document.getElementById('stats-panel');
+  const prevSummary = panel.querySelector('.stats-summary');
+  if (prevSummary) prevSummary.remove();
+  
+  panel.insertAdjacentHTML('beforeend', resumen);
 }
 
 function mostrarFinDelJuego(resultado) {
