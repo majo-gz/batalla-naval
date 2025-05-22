@@ -30,13 +30,9 @@ const gameStats = {
 // Efectos de sonido
 const sounds = {
   background: null,
-  victory: null,
-  defeat: null,
-  playerHit: null,
-  enemyHit: null,
-  water: null,
-  placeShip: null,
-  isMusicPlaying: false
+  victory: null,defeat: null,playerHit: null, enemyHit: null, water: null, placeShip: null, 
+  item: null, shield: null, radar: null,reveal: null, click: null, dobledisparo:null,
+   isMusicPlaying: false
 };
 
 let lastAttackPositions = [];
@@ -48,20 +44,33 @@ function preload() {
   sounds.playerHit = loadSound('assets/sounds/impactoJugador.mp3');
   sounds.enemyHit = loadSound('assets/sounds/impactoIA.mp3');
   sounds.water = loadSound('assets/sounds/agua.mp3');
-  sounds.placeShip = loadSound('assets/sounds/colocarBarco.mp3');
+  sounds.placeShip = loadSound('Assets/sounds/colocarBarco.mp3');
+  sounds.item = loadSound('assets/sounds/obteneritem.mp3');//desde acá empiezan los cambios
+  sounds.shield = loadSound('assets/sounds/shield.mp3');
+  sounds.radar = loadSound('assets/sounds/radar.mp3');
+  sounds.reveal = loadSound('assets/sounds/revelar.mp3');
+  sounds.click = loadSound('assets/sounds/click.mp3');
+  sounds.dobledisparo = loadSound('assets/sounds/dobledisparo.mp3');
+  
+}
 
-  //sounds.radar =loadSound(Assets/sounds/radar.mp3)
+function setupButtonSounds() {
+  document.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => playSound(sounds.click));
+  });
 }
 
 function setup() {
-  createCanvas(800, 340).parent('game-container');
-  textAlign(CENTER, CENTER);
+  createCanvas(830, 370).parent('game-container');
 
+  textAlign(CENTER, CENTER);
+  
   setupEventListeners();
   initializeBoards();
   drawBoards();
 
-  userStartAudio();
+  setupButtonSounds();//añadí aquí
+  userStartAudio();//creo que esto no hace nada
   frameRate(30);
 }
 
@@ -117,8 +126,74 @@ function createEmptyBoard(size) {
 function drawBoards() {
   clear();
 
-  drawBoard(gameConfig.playerBoard, 0, 0, false);
-  drawBoard(gameConfig.enemyBoard, 480, 0, true);
+ // 1. Ajustar posición para dejar espacio a los bordes
+  const margin = 25; // Margen general del canvas
+  const boardSpacing = 40; // Espacio entre tableros
+  
+  // 2. Dibujar tableros con posición ajustada
+  drawBoard(gameConfig.playerBoard, margin, margin, false);
+  drawBoard(gameConfig.enemyBoard, margin * 2 + 400 + boardSpacing, margin, true);
+  
+  // 3. Mostrar borde neón ANTES de los ataques
+  if (gameConfig.isPlayerTurn) {
+    drawNeonBorder(margin * 2 + 400 + boardSpacing, margin, gameConfig.enemyBoard);
+  } else {
+    drawNeonBorder(margin, margin, gameConfig.playerBoard);
+  }
+}
+
+function drawNeonBorder(x, y, board) {
+  push();
+  translate(x, y);
+  
+  const padding = 4; // Reducido para que quede pegado
+  const cellSize = gameConfig.cellSize;
+  const boardSize = board.length;
+  const boardWidth = boardSize * cellSize;
+  
+  // Efecto idéntico al de notificaciones
+  drawingContext.shadowBlur = 20;
+  drawingContext.shadowColor = gameConfig.isPlayerTurn 
+    ? 'rgba(0, 200, 255, 0.7)'  
+    : 'rgba(230, 72, 50, 0.7)';
+  
+  // Borde principal (exterior)
+  noFill();
+  strokeWeight(5);
+  stroke(gameConfig.isPlayerTurn 
+    ? 'rgba(0, 180, 240, 0.9)'  // Azul ligeramente más intenso para el trazo
+    : 'rgba(220, 70, 50, 0.9)'); // Rojo ligeramente más intenso para el trazo
+  
+  rect(-padding, -padding, 
+       boardWidth + padding * 2, 
+       boardWidth + padding * 2,
+       8);
+  
+  // Borde intermedio (efecto neon)
+  strokeWeight(3);
+  stroke(gameConfig.isPlayerTurn 
+    ? 'rgba(0, 220, 255, 0.6)'  // Azul más brillante
+    : 'rgba(240, 80, 60, 0.6)'); // Rojo más brillante
+  
+  rect(-padding + 1, -padding + 1, 
+       boardWidth + padding * 2 - 2, 
+       boardWidth + padding * 2 - 2,
+       7);
+  
+  // Borde interno (brillo suave)
+  strokeWeight(1.5);
+  stroke(gameConfig.isPlayerTurn 
+    ? 'rgba(150, 240, 255, 0.4)'  // Azul muy claro
+    : 'rgba(255, 180, 150, 0.4)'); // Rojo muy claro
+  
+  rect(-padding + 3, -padding + 3, 
+       boardWidth + padding * 2 - 6, 
+       boardWidth + padding * 2 - 6,
+       5);
+  
+  drawingContext.shadowBlur = 0;
+  pop();
+
 }
 
 function showScreen(id) {
@@ -279,6 +354,28 @@ function placeRandomShips(board, count) {
       placed++;
     }
   }
+}
+
+function mostrarNotificacion(texto, duracion = 2000) {
+  const pantalla = document.getElementById('notificacion-pantalla');
+  const contenido = pantalla.querySelector('.contenido-notificacion');
+  
+  // Configura el contenido
+  contenido.textContent = texto;
+  
+  // Muestra la pantalla
+  pantalla.style.display = 'flex'; // Aseguramos que sea visible
+  setTimeout(() => {
+    pantalla.classList.add('mostrar');
+  }, 10);
+  
+  // Oculta después de la duración
+  setTimeout(() => {
+    pantalla.classList.remove('mostrar');
+    setTimeout(() => {
+      pantalla.style.display = 'none';
+    }, 500); // Espera a que termine la transición
+  }, duracion);
 }
 
 function markHit(row, col) {
@@ -494,6 +591,7 @@ const shipsLeft = loser === 'player' ? gameConfig.playerShips : gameConfig.enemy
 
 function startPlayerTurn() {
   gameConfig.isPlayerTurn = true;
+  drawBoards();
   tryGetItem();
   updateStatus("¡Tu turno!");
 }
@@ -524,6 +622,8 @@ function tryGetItem() {
     }
 
     gameConfig.inventory.push(selectedItem);
+    mostrarNotificacion(`✨¡Has obtenido un ítem: ${getItemName(selectedItem)}!✨`, 2000);
+    playSound(sounds.item);
     console.log(`Item obtenido: ${selectedItem} (Rareza: ${itemRarities[selectedItem]}%)`);
     showMessage(`¡Has obtenido un ítem: ${getItemName(selectedItem)}!`);
     updateInventoryUI();
@@ -699,20 +799,24 @@ function getItemDescription(code) {
 function useItem(item) {
   let used = false;
 
-  switch (item) {
+  switch(item) {
     case 'radar':
       used = revealRandomShip();
+        playSound(sounds.radar);//cambio aquí
       break;
     case 'doble':
       gameConfig.doubleShot = true;
       updateStatus("¡Activado doble disparo!");
+        playSound(sounds.dobledisparo);//cambio aquí
       used = true;
       break;
     case 'revelar':
       used = revealRandomPositions();
+      playSound(sounds.reveal);//cambio aquí
       break;
     case 'defensa':
       used = protectRandomCells();
+       playSound(sounds.shield);//cambio aquí
       if (used) {
         updateStatus("¡Defensa electrónica activada! 2 celdas protegidas.");
         // Quitar la protección después de 2 turnos
