@@ -43,70 +43,42 @@
     </div>
 
     <!-- Pantalla Victoria -->
-    <div id="pantalla-victoria" class="pantalla oculto end-screen">
-        <h2>🎉 ¡Victoria! 🎉</h2>
-        <p>Has hundido toda la flota enemiga</p>
-        <img src="assets/images/victory.png" alt="Victoria" class="end-image">
-
-        <div class="end-buttons">
-            <button id="btn-stats-end" class="game-button">Ver estadísticas</button>
-            <!--<button onclick="resetGame()" class="game-button">🔄 Nuevo juego</button>-->
-            <button id="btn-new-game" class="game-button">🔄 Nuevo juego</button>
-        </div>
-
-        <div id="stats-panel" class="oculto">
-            <h3>Estadísticas de la partida</h3>
-            <div class="stats-grid">
-                <div>Disparos:</div>
-                <div id="stats-shots">0</div>
-
-                <div>Precisión:</div>
-                <div id="stats-accuracy">0%</div>
-
-                <div>Barcos hundidos:</div>
-                <div id="stats-sunk">0</div>
-
-                <div>Victorias:</div>
-                <div id="stats-wins">0</div>
-
-                <div>Precisión total:</div>
-                <div id="stats-total-accuracy">0%</div>
-            </div>
-        </div>
+<div id="pantalla-final" class="pantalla oculto end-screen">
+  <div id="end-content">
+    <div id="mensaje-victoria" class="end-message oculto">
+      <h2>🎉 ¡Victoria! 🎉</h2>
+      <p>Has hundido toda la flota enemiga</p>
+      <img src="assets/images/victory.png" alt="Victoria" class="end-image">
     </div>
 
-    <!-- Pantalla Derrota -->
-    <div id="pantalla-derrota" class="pantalla oculto end-screen">
-        <h2>💀 ¡Derrota! 💀</h2>
-        <p>La IA ha hundido todos tus barcos</p>
-        <img src="assets/images/defeat.png" alt="Derrota" class="end-image">
-
-        <div class="end-buttons">
-            <button id="btn-stats-end" class="game-button">Ver estadísticas</button>
-            <!--<button onclick="resetGame()" class="game-button">🔄 Nuevo juego</button>-->
-            <button id="btn-new-game" class="game-button">🔄 Nuevo juego</button>
-        </div>
-
-        <div id="stats-panel" class="oculto">
-            <h3>Estadísticas de la partida</h3>
-            <div class="stats-grid">
-                <div>Disparos:</div>
-                <div id="stats-shots">0</div>
-
-                <div>Precisión:</div>
-                <div id="stats-accuracy">0%</div>
-
-                <div>Barcos hundidos:</div>
-                <div id="stats-sunk">0</div>
-
-                <div>Victorias:</div>
-                <div id="stats-wins">0</div>
-
-                <div>Precisión total:</div>
-                <div id="stats-total-accuracy">0%</div>
-            </div>
-        </div>
+    <div id="mensaje-derrota" class="end-message oculto">
+      <h2>💀 ¡Derrota! 💀</h2>
+      <p>La IA ha hundido todos tus barcos</p>
+      <img src="assets/images/defeat.png" alt="Derrota" class="end-image">
     </div>
+  </div>
+
+  <div class="end-buttons">
+    <button id="btn-stats-end" class="game-button">Ver estadísticas</button>
+    <button id="btn-new-game" class="game-button">🔄 Nuevo juego</button>
+  </div>
+
+  <div id="stats-panel" class="oculto">
+    <h3>Estadísticas de la partida</h3>
+    <div class="stats-grid">
+      <div>Disparos:</div>
+      <div id="stats-shots">0</div>
+      <div>Precisión:</div>
+      <div id="stats-accuracy">0%</div>
+      <div>Barcos hundidos:</div>
+      <div id="stats-sunk">0</div>
+      <div>Victorias:</div>
+      <div id="stats-wins">0</div>
+      <div>Precisión total:</div>
+      <div id="stats-total-accuracy">0%</div>
+    </div>
+  </div>
+</div>
 
     <script src="juego.js"></script>
 
