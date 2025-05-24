@@ -36,7 +36,7 @@ const sounds = {
   item: null, shield: null, radar: null,reveal: null, click: null, dobledisparo:null,
    isMusicPlaying: false
 };
-
+let imagebg;
 let lastAttackPositions = [];
 
 function preload() {
@@ -53,6 +53,7 @@ function preload() {
   sounds.reveal = loadSound('assets/sounds/revelar.mp3');
   sounds.click = loadSound('assets/sounds/click.mp3');
   sounds.dobledisparo = loadSound('assets/sounds/dobledisparo.mp3');
+  bgImage = loadImage('assets/images/fondo.jpg');
   
 }
 
@@ -558,7 +559,7 @@ function isCellProtected(row, col) {
 function processAttackResult(row, col) {
   if (isCellProtected(row, col)) {
     gameConfig.playerBoard[row][col] = 'X';
-    updateStatus("¡Defensa electrónica ha bloqueado un ataque enemigo!");
+    updateStatus("¡Defensa ha bloqueado un ataque enemigo!");
     gameConfig.playerBoard[y][x] = 'X'; // Marcar como ataque fallido
     gameStats.misses++;
     gameStats.currentShots++;
@@ -793,7 +794,7 @@ function getItemName(code) {
     'radar': 'Radar',
     'doble': 'Disparo Doble',
     'revelar': 'Revelar Posición',
-    'defensa': 'Defensa Electrónica' // Nuevo nombre
+    'defensa': 'Defensa' // Nuevo nombre
   };
   return names[code] || 'Ítem';
 }
@@ -872,11 +873,11 @@ gameStats.itemsUsed[item]++;
       used = protectRandomCells();
        playSound(sounds.shield);//cambio aquí
       if (used) {
-        updateStatus("¡Defensa electrónica activada! 2 celdas protegidas.");
+        updateStatus("¡Defensa activada! 2 celdas protegidas.");
         // Quitar la protección después de 2 turnos
         setTimeout(() => {
           removeProtection();
-          updateStatus("La defensa electrónica ha expirado.");
+          updateStatus("La defensa ha expirado.");
           drawBoards();
         }, 3000 * 2); // 3 turnos (asumiendo 1 turno = ~3 segundos)
       } else {
@@ -1084,7 +1085,7 @@ function generarInformeFinal() {
     radar: 'Radar',
     doble: 'Doble Disparo',
     revelar: 'Revelar Posición',
-    defensa: 'Defensa Electrónica'
+    defensa: 'Defensa'
   };
 
   // Actualizar estadísticas básicas

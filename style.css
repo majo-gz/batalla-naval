@@ -114,15 +114,16 @@ h3, h4, h5, h6 {
 }
 
 .inventory-panel {
-  background-color: #34495e;
+  background-color: tan;
  padding:  2px 10px 10px !important; /* top, right, bottom, left */
     margin: 0;
     box-sizing: border-box;
     font-size: 24px;
-    background-color: #34495e;
+    background-color: rgb(151, 136, 116);
     width: 100%;
     height: 170px;
     border-radius: 8px;
+    opacity: 0.7;
     text-align: center; /* Para centrar el título "Inventario" */
 }
 
@@ -188,7 +189,7 @@ h3, h4, h5, h6 {
 }
 
 .item-inventario {
-    background-color: #3498db;
+    background-color: tan;
     padding: 10px;
     border-radius: 5px;
     cursor: pointer;
@@ -196,7 +197,7 @@ h3, h4, h5, h6 {
 }
 
 .item-inventario:hover {
-    background-color: #2980b9;
+
     transform: scale(1.05);
 }
 
@@ -352,7 +353,7 @@ h3, h4, h5, h6 {
 .probability-counter {
   margin: 10px 0;
   font-size: 14px;
-  color: #666;
+  color: #ffffff;
   font-style: italic;
 }
 
@@ -393,4 +394,17 @@ h3, h4, h5, h6 {
 .stats-summary p {
   margin: 5px 0;
   font-size: 14px;
+}
+.fullscreen-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('assets/images/Fondo.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: -1; /* Para que quede detrás de todo */
+  opacity: 0.7; /* Ajusta la transparencia según necesites */
 }
