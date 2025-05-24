@@ -20,7 +20,7 @@ const gameConfig = {
 
 const gameStats = {
   hits: 0,
-    itemsUsed: {}, // Nuevo: contador por ítem
+  itemsUsed: {}, // Nuevo: contador por ítem
   turns: 0,          // Disparos acertados
   misses: 0,        // Disparos fallados
   gamesPlayed: 0,   // Partidas jugadas
@@ -32,9 +32,9 @@ const gameStats = {
 // Efectos de sonido
 const sounds = {
   background: null,
-  victory: null,defeat: null,playerHit: null, enemyHit: null, water: null, placeShip: null, 
-  item: null, shield: null, radar: null,reveal: null, click: null, dobledisparo:null,
-   isMusicPlaying: false
+  victory: null, defeat: null, playerHit: null, enemyHit: null, water: null, placeShip: null,
+  item: null, shield: null, radar: null, reveal: null, click: null, dobledisparo: null,
+  isMusicPlaying: false
 };
 let imagebg;
 let lastAttackPositions = [];
@@ -46,7 +46,7 @@ function preload() {
   sounds.playerHit = loadSound('assets/sounds/impactoJugador.mp3');
   sounds.enemyHit = loadSound('assets/sounds/impactoIA.mp3');
   sounds.water = loadSound('assets/sounds/agua.mp3');
-  sounds.placeShip = loadSound('Assets/sounds/colocarBarco.mp3');
+  sounds.placeShip = loadSound('assets/sounds/colocarBarco.mp3');
   sounds.item = loadSound('assets/sounds/obteneritem.mp3');//desde acá empiezan los cambios
   sounds.shield = loadSound('assets/sounds/shield.mp3');
   sounds.radar = loadSound('assets/sounds/radar.mp3');
@@ -54,7 +54,7 @@ function preload() {
   sounds.click = loadSound('assets/sounds/click.mp3');
   sounds.dobledisparo = loadSound('assets/sounds/dobledisparo.mp3');
   bgImage = loadImage('assets/images/fondo.jpg');
-  
+
 }
 
 function setupButtonSounds() {
@@ -67,7 +67,7 @@ function setup() {
   createCanvas(830, 370).parent('game-container');
 
   textAlign(CENTER, CENTER);
-  
+
   setupEventListeners();
   initializeBoards();
   drawBoards();
@@ -95,15 +95,15 @@ function setupEventListeners() {
   document.querySelectorAll('[id^="btn-stats"]').forEach(btn => {
     btn.addEventListener('click', toggleStats);
   });
-  
+
   // Cerrar al hacer clic fuera del panel
   document.addEventListener('click', (e) => {
     const statsPanel = document.getElementById('stats-panel');
     const isStatsBtn = e.target.closest('[id^="btn-stats"]');
-    
-    if (!statsPanel.classList.contains('oculto') && 
-        !statsPanel.contains(e.target) && 
-        !isStatsBtn) {
+
+    if (!statsPanel.classList.contains('oculto') &&
+      !statsPanel.contains(e.target) &&
+      !isStatsBtn) {
       toggleStats();
     }
   });
@@ -144,14 +144,14 @@ function createEmptyBoard(size) {
 function drawBoards() {
   clear();
 
- // 1. Ajustar posición para dejar espacio a los bordes
+  // 1. Ajustar posición para dejar espacio a los bordes
   const margin = 25; // Margen general del canvas
   const boardSpacing = 40; // Espacio entre tableros
-  
+
   // 2. Dibujar tableros con posición ajustada
   drawBoard(gameConfig.playerBoard, margin, margin, false);
   drawBoard(gameConfig.enemyBoard, margin * 2 + 400 + boardSpacing, margin, true);
-  
+
   // 3. Mostrar borde neón ANTES de los ataques
   if (gameConfig.isPlayerTurn) {
     drawNeonBorder(margin * 2 + 400 + boardSpacing, margin, gameConfig.enemyBoard);
@@ -163,52 +163,52 @@ function drawBoards() {
 function drawNeonBorder(x, y, board) {
   push();
   translate(x, y);
-  
+
   const padding = 4; // Reducido para que quede pegado
   const cellSize = gameConfig.cellSize;
   const boardSize = board.length;
   const boardWidth = boardSize * cellSize;
-  
+
   // Efecto idéntico al de notificaciones
   drawingContext.shadowBlur = 20;
-  drawingContext.shadowColor = gameConfig.isPlayerTurn 
-    ? 'rgba(0, 200, 255, 0.7)'  
+  drawingContext.shadowColor = gameConfig.isPlayerTurn
+    ? 'rgba(0, 200, 255, 0.7)'
     : 'rgba(230, 72, 50, 0.7)';
-  
+
   // Borde principal (exterior)
   noFill();
   strokeWeight(5);
-  stroke(gameConfig.isPlayerTurn 
+  stroke(gameConfig.isPlayerTurn
     ? 'rgba(0, 180, 240, 0.9)'  // Azul ligeramente más intenso para el trazo
     : 'rgba(220, 70, 50, 0.9)'); // Rojo ligeramente más intenso para el trazo
-  
-  rect(-padding, -padding, 
-       boardWidth + padding * 2, 
-       boardWidth + padding * 2,
-       8);
-  
+
+  rect(-padding, -padding,
+    boardWidth + padding * 2,
+    boardWidth + padding * 2,
+    8);
+
   // Borde intermedio (efecto neon)
   strokeWeight(3);
-  stroke(gameConfig.isPlayerTurn 
+  stroke(gameConfig.isPlayerTurn
     ? 'rgba(0, 220, 255, 0.6)'  // Azul más brillante
     : 'rgba(240, 80, 60, 0.6)'); // Rojo más brillante
-  
-  rect(-padding + 1, -padding + 1, 
-       boardWidth + padding * 2 - 2, 
-       boardWidth + padding * 2 - 2,
-       7);
-  
+
+  rect(-padding + 1, -padding + 1,
+    boardWidth + padding * 2 - 2,
+    boardWidth + padding * 2 - 2,
+    7);
+
   // Borde interno (brillo suave)
   strokeWeight(1.5);
-  stroke(gameConfig.isPlayerTurn 
+  stroke(gameConfig.isPlayerTurn
     ? 'rgba(150, 240, 255, 0.4)'  // Azul muy claro
     : 'rgba(255, 180, 150, 0.4)'); // Rojo muy claro
-  
-  rect(-padding + 3, -padding + 3, 
-       boardWidth + padding * 2 - 6, 
-       boardWidth + padding * 2 - 6,
-       5);
-  
+
+  rect(-padding + 3, -padding + 3,
+    boardWidth + padding * 2 - 6,
+    boardWidth + padding * 2 - 6,
+    5);
+
   drawingContext.shadowBlur = 0;
   pop();
 
@@ -377,16 +377,16 @@ function placeRandomShips(board, count) {
 function mostrarNotificacion(texto, duracion = 2000) {
   const pantalla = document.getElementById('notificacion-pantalla');
   const contenido = pantalla.querySelector('.contenido-notificacion');
-  
+
   // Configura el contenido
   contenido.textContent = texto;
-  
+
   // Muestra la pantalla
   pantalla.style.display = 'flex'; // Aseguramos que sea visible
   setTimeout(() => {
     pantalla.classList.add('mostrar');
   }, 10);
-  
+
   // Oculta después de la duración
   setTimeout(() => {
     pantalla.classList.remove('mostrar');
@@ -443,19 +443,38 @@ function handleShipPlacement(canvasX, canvasY) {
 }
 
 function handlePlayerAttack(canvasX, canvasY) {
-  const col = floor((canvasX - 480) / gameConfig.cellSize);
-  const row = floor(canvasY / gameConfig.cellSize);
+  // 1. Calcular posición del tablero enemigo igual que en drawBoards()
+  const margin = 25;
+  const boardSpacing = 40;
+  const enemyBoardX = margin * 2 + 400 + boardSpacing;
+  const enemyBoardY = margin;
+
+  // 2. Verificar si el clic está dentro del tablero enemigo
+  if (canvasX < enemyBoardX || 
+      canvasX > enemyBoardX + gameConfig.boardSize * gameConfig.cellSize ||
+      canvasY < enemyBoardY || 
+      canvasY > enemyBoardY + gameConfig.boardSize * gameConfig.cellSize) {
+    return; // Clic fuera del tablero - no hacer nada
+  }
+
+  // 3. Calcular fila y columna RELATIVAS al tablero enemigo
+  const col = floor((canvasX - enemyBoardX) / gameConfig.cellSize);
+  const row = floor((canvasY - enemyBoardY) / gameConfig.cellSize);
 
   gameStats.turns++;
 
-  if (!isValidCell(row, col)) return;
+  if (!isValidCell(row, col)) {
+    console.log("Clic inválido en:", {row, col, canvasX, canvasY}); // Debug
+    return;
+  }
 
   const cellValue = gameConfig.enemyBoard[row][col];
 
+  // Resto de tu lógica original (sin cambios)
   if (cellValue === 'O' || cellValue === 'R') {
     gameConfig.enemyBoard[row][col] = '!';
     markHit(row, col);
-    gameConfig.enemyShips--; // ← Esto ya está correcto
+    gameConfig.enemyShips--;
     gameStats.hits++;
     updateShipCount();
     updateStatus("¡Impacto! Has hundido un barco enemigo.");
@@ -488,8 +507,6 @@ function handlePlayerAttack(canvasX, canvasY) {
     gameStats.currentShots++;
     gameStats.totalShots++;
   }
-
-  // updateStats();
 
   updateShipCount();
   drawBoards();
@@ -593,11 +610,11 @@ function checkGameEnd(loser) {
     const isVictory = loser === 'enemy';
     const endScreenId = isVictory ? 'pantalla-victoria' : 'pantalla-derrota';
 
-       // Configurar mensaje y sonido
+    // Configurar mensaje y sonido
     updateStatus(isVictory ? "¡Felicidades! Has ganado el juego." :
       "¡La IA ha ganado! Mejor suerte la próxima vez.");
     playSound(isVictory ? sounds.victory : sounds.defeat);
-    
+
     stopBackgroundMusic();
     // updateStats();
     // Actualizar estadísticas
@@ -611,7 +628,7 @@ function checkGameEnd(loser) {
     }
 
 
- 
+
   }
 }
 
@@ -625,14 +642,14 @@ function startPlayerTurn() {
 function tryGetItem() {
   // Probabilidad base de obtener ítem (30%)
   let baseProbability = 0.3;
-  
+
   // Penalización del 5% por cada ítem en el inventario
   const penaltyPerItem = 0.05;
   const currentPenalty = gameConfig.inventory.length * penaltyPerItem;
-  
+
   // Probabilidad final (base - penalización) con mínimo del 5%
   const finalProbability = Math.max(baseProbability - currentPenalty, 0.05);
-  
+
   console.log(`Probabilidad de ítem: ${(finalProbability * 100).toFixed(1)}% (Base: 30% - Penalización: ${(currentPenalty * 100).toFixed(1)}%)`);
 
   if (Math.random() < finalProbability) {
@@ -669,7 +686,7 @@ function tryGetItem() {
     mostrarNotificacion(`✨¡Has obtenido: ${getItemName(selectedItem)}! (${gameConfig.inventory.length}/5)✨`, 2000);
     playSound(sounds.item);
     updateInventoryUI();
-    
+
     // Actualizar visualización de probabilidad
     updateProbabilityDisplay();
   }
@@ -690,9 +707,9 @@ function updateShipCount() {
   document.getElementById('stats-sunk').textContent =
     gameConfig.enemyShipsTotal - enemyShipsDisplay;
 
-      // Actualizar probabilidad
+  // Actualizar probabilidad
   const probability = calculateHitProbability();
-  document.getElementById('probability-display').textContent = 
+  document.getElementById('probability-display').textContent =
     `Probabilidad de impacto: ${probability}%`;
 }
 
@@ -850,19 +867,19 @@ function useItem(item) {
   let used = false;
 
   if (!gameStats.itemsUsed[item]) {
-  gameStats.itemsUsed[item] = 0;
-}
-gameStats.itemsUsed[item]++;
+    gameStats.itemsUsed[item] = 0;
+  }
+  gameStats.itemsUsed[item]++;
 
   switch (item) {
     case 'radar':
       used = revealRandomShip();
-        playSound(sounds.radar);//cambio aquí
+      playSound(sounds.radar);//cambio aquí
       break;
     case 'doble':
       gameConfig.doubleShot = true;
       updateStatus("¡Activado doble disparo!");
-        playSound(sounds.dobledisparo);//cambio aquí
+      playSound(sounds.dobledisparo);//cambio aquí
       used = true;
       break;
     case 'revelar':
@@ -871,7 +888,7 @@ gameStats.itemsUsed[item]++;
       break;
     case 'defensa':
       used = protectRandomCells();
-       playSound(sounds.shield);//cambio aquí
+      playSound(sounds.shield);//cambio aquí
       if (used) {
         updateStatus("¡Defensa activada! 2 celdas protegidas.");
         // Quitar la protección después de 2 turnos
@@ -1061,15 +1078,15 @@ function markHit(row, col) {
 function toggleStats() {
   const statsPanel = document.getElementById('stats-panel');
   const isHidden = statsPanel.classList.contains('oculto');
-  
+
   // Actualizar texto de todos los botones de estadísticas
   document.querySelectorAll('[id^="btn-stats"]').forEach(btn => {
     btn.textContent = isHidden ? 'Ocultar estadísticas' : 'Ver estadísticas';
   });
-  
+
   // Alternar visibilidad del panel
   statsPanel.classList.toggle('oculto');
-  
+
   // Generar el informe solo cuando se muestra el panel
   if (isHidden) {
     generarInformeFinal();
@@ -1123,7 +1140,7 @@ function generarInformeFinal() {
   const panel = document.getElementById('stats-panel');
   const prevSummary = panel.querySelector('.stats-summary');
   if (prevSummary) prevSummary.remove();
-  
+
   panel.insertAdjacentHTML('beforeend', resumen);
 }
 
@@ -1147,7 +1164,7 @@ function mostrarFinDelJuego(resultado) {
 
   // Actualizar estadísticas
   generarInformeFinal();
-  
+
   // Detener música de fondo
   stopBackgroundMusic();
 }
@@ -1156,11 +1173,11 @@ function calculateHitProbability() {
   // Contar celdas no reveladas y barcos restantes
   let hiddenCells = 0;
   let revealedShips = 0;
-  
+
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
       const cellValue = gameConfig.enemyBoard[i][j];
-      
+
       if (cellValue === '-' || cellValue === 'O') {
         hiddenCells++;
       }
@@ -1169,20 +1186,20 @@ function calculateHitProbability() {
       }
     }
   }
-  
+
   const remainingShips = gameConfig.enemyShipsTotal - revealedShips;
-  
+
   // Evitar división por cero
   if (hiddenCells === 0 || remainingShips <= 0) {
     return 0;
   }
-  
+
   // Probabilidad básica (barcos restantes / celdas ocultas)
   let probability = (remainingShips / hiddenCells) * 100;
-  
+
   // Ajustar probabilidad basada en barcos encontrados
   const hitRatio = revealedShips / gameConfig.enemyShipsTotal;
   probability *= (1 + hitRatio * 0.5); // Aumentar probabilidad si ya hemos encontrado barcos
-  
+
   return Math.min(Math.round(probability), 100); // Limitar a 100%
 }
