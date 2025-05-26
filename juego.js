@@ -15,7 +15,10 @@ const gameConfig = {
   lastBlinkCleanup: 0,
   inventory: [],
   protectedCells: [],
-  enemyShipsTotal: 0
+  enemyShipsTotal: 0,
+  turnTimer: null,      // Referencia al temporizador
+  timeLeft: 10,         // Segundos restantes
+  maxTurnTime: 10       // Límite de tiempo por turno (segundos)
 };
 
 const gameStats = {
@@ -355,6 +358,7 @@ function initGame(mode, shipCount) {
   startBackgroundMusic();
   drawBoards();
   showScreen('pantalla-juego');
+  this.startPlayerTurn();
 }
 
 function initRemainingShips(count) {
@@ -398,6 +402,90 @@ function mostrarNotificacion(texto, duracion = 2000) {
 
 function markHit(row, col) {
   gameConfig.blinkEffect[`${row},${col}`] = frameCount;
+}
+
+/*
+function startPlayerTurn() {
+  gameConfig.isPlayerTurn = true;
+  drawBoards();
+  tryGetItem();
+  updateStatus("¡Tu turno!");
+}
+*/
+
+function startPlayerTurn() {
+  gameConfig.isPlayerTurn = true;
+  resetTurnTimer(); // Iniciar el contador
+  updateTurnTimerDisplay(); // Mostrar visualmente
+  drawBoards();
+  updateStatus(`¡Tu turno! Tienes ${gameConfig.maxTurnTime} segundos`);
+  tryGetItem();
+}
+
+function endPlayerTurn() {
+  clearTurnTimer();
+  gameConfig.isPlayerTurn = false;
+  updateStatus("Turno terminado. Es el turno de la IA.");
+  drawBoards();
+  setTimeout(aiTurn, 1000);
+}
+
+function resetTurnTimer() {
+  // Limpiar temporizador anterior si existe
+  if (gameConfig.turnTimer) {
+    clearInterval(gameConfig.turnTimer);
+  }
+  
+  gameConfig.timeLeft = gameConfig.maxTurnTime;
+  
+  // Iniciar nuevo temporizador
+  gameConfig.turnTimer = setInterval(() => {
+    gameConfig.timeLeft--;
+    updateTurnTimerDisplay();
+    
+    if (gameConfig.timeLeft <= 0) {
+      endPlayerTurnDueToTimeout();
+    }
+  }, 1000);
+}
+
+function updateTurnTimerDisplay() {
+const timerElement = document.getElementById('turn-timer');
+  const statusElement = document.getElementById('status');
+  
+  // Actualizar el elemento del temporizador
+  if (timerElement) {
+    timerElement.textContent = `Tiempo: ${gameConfig.timeLeft}s`;
+    timerElement.style.color = gameConfig.timeLeft <= 3 ? 'red' : 'white';
+  }
+  
+  // Actualizar el mensaje de estado
+  if (statusElement) {
+    if (gameConfig.timeLeft <= 3) {
+      statusElement.textContent = `¡Date prisa! Te quedan ${gameConfig.timeLeft} segundos`;
+      statusElement.style.color = 'red';
+    } else {
+      statusElement.textContent = `Tu turno - Tiempo restante: ${gameConfig.timeLeft} segundos`;
+      statusElement.style.color = ''; // Color por defecto
+    }
+  }
+}
+
+function endPlayerTurnDueToTimeout() {
+  clearInterval(gameConfig.turnTimer);
+  mostrarNotificacion("¡Tiempo agotado! Pierdes tu turno.");
+  gameConfig.isPlayerTurn = false;
+  updateTurnTimerDisplay();
+  setTimeout(aiTurn, 1000);
+}
+
+function clearTurnTimer() {
+  if (gameConfig.turnTimer) {
+    clearInterval(gameConfig.turnTimer);
+    gameConfig.turnTimer = null;
+  }
+  gameConfig.timeLeft = gameConfig.maxTurnTime;
+  updateTurnTimerDisplay();
 }
 
 function mousePressed() {
@@ -493,9 +581,7 @@ function handlePlayerAttack(canvasX, canvasY) {
     gameConfig.doubleShot = false;
     updateStatus("¡Disparo doble activado! Puedes disparar una vez más.");
   } else {
-    gameConfig.isPlayerTurn = false;
-    drawBoards();
-    setTimeout(aiTurn, 1000);
+   endPlayerTurn();
   }
 
   if (cellValue === 'O' || cellValue === 'R') {
@@ -630,13 +716,6 @@ function checkGameEnd(loser) {
 
 
   }
-}
-
-function startPlayerTurn() {
-  gameConfig.isPlayerTurn = true;
-  drawBoards();
-  tryGetItem();
-  updateStatus("¡Tu turno!");
 }
 
 function tryGetItem() {
@@ -912,6 +991,11 @@ function useItem(item) {
     }
     updateInventoryUI();
   }
+ // Solo terminar turno si no es disparo doble
+    if (item !== 'doble') {
+      endPlayerTurn();
+    }
+
 }
 
 function revealRandomShip() {
