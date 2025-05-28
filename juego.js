@@ -23,18 +23,11 @@ const gameConfig = {
 
 // Modificar el objeto gameStats
 const gameStats = {
-  boatHits: 0,                    // Solo para esta partida
-  itemsUsed: {},             // Solo para esta partida
-  turns: 0,                  // Solo para esta partida
-  misses: 0,                 // Solo para esta partida
   gamesPlayed: 0,           // Contador global
   wins: 0,                  // Contador global
-  currentShots: 0,          // Solo para esta partida
-  totalShots: 0,            // Solo para esta partida
   currentGame: {            // Objeto para esta partida
-    boatHits: 0,
-    misses: 0,
     shots: 0,
+    hits: 0,
     itemsUsed: {}
   }
 };
@@ -345,27 +338,34 @@ function initGame(mode, shipCount) {
   gameConfig.gameMode = mode;
   initializeBoards();
 
-
-
+  // Configuración de barcos
   gameConfig.playerShips = shipCount;
   gameConfig.enemyShips = shipCount;
   gameConfig.enemyShipsTotal = shipCount; // Guarda el total inicial de barcos
-  gameStats.boatHits = 0;
-  gameStats.misses = 0;
-  gameStats.currentShots = 0;
-  gameConfig.enemyShipsTotal = shipCount;
 
-  if (gameConfig.gameMode !== 'manual') { placeRandomShips(gameConfig.playerBoard, gameConfig.playerShips); }
+  // Inicializar estadísticas de la partida actual
+  gameStats.currentGame = {
+    shots: 0,
+    hits: 0,
+    turns: 0,
+    itemsUsed: {}
+  };
+
+  // Colocación de barcos
+  if (gameConfig.gameMode !== 'manual') { 
+    placeRandomShips(gameConfig.playerBoard, gameConfig.playerShips); 
+  }
   placeRandomShips(gameConfig.enemyBoard, gameConfig.enemyShips);
 
   initRemainingShips(gameConfig.enemyShips);
   updateShipCount();
   gameConfig.isPlayerTurn = true;
 
+  // Iniciar juego
   startBackgroundMusic();
   drawBoards();
   showScreen('pantalla-juego');
-  this.startPlayerTurn();
+  startPlayerTurn(); // Eliminado 'this.' ya que no es necesario en este contexto
 }
 
 function initRemainingShips(count) {
@@ -411,17 +411,16 @@ function markHit(row, col) {
   gameConfig.blinkEffect[`${row},${col}`] = frameCount;
 }
 
-/*
-function startPlayerTurn() {
-  gameConfig.isPlayerTurn = true;
-  drawBoards();
-  tryGetItem();
-  updateStatus("¡Tu turno!");
-}
-*/
 
 function startPlayerTurn() {
   gameConfig.isPlayerTurn = true;
+  
+    if (gameStats.currentGame.turns !== undefined) {
+      gameStats.currentGame.turns++;
+    } else {
+      gameStats.currentGame.turns = 1;
+    }
+
   resetTurnTimer(); // Iniciar el contador
   updateTurnTimerDisplay(); // Mostrar visualmente
   drawBoards();
@@ -540,7 +539,7 @@ function handleShipPlacement(canvasX, canvasY) {
 }
 
 function handlePlayerAttack(canvasX, canvasY) {
-  // 1. Calcular posición del tablero enemigo igual que en drawBoards()
+  // 1. Calcular posición del tablero enemigo
   const margin = 25;
   const boardSpacing = 40;
   const enemyBoardX = margin * 2 + 400 + boardSpacing;
@@ -554,58 +553,49 @@ function handlePlayerAttack(canvasX, canvasY) {
     return; // Clic fuera del tablero - no hacer nada
   }
 
-  // 3. Calcular fila y columna RELATIVAS al tablero enemigo
+  // 3. Calcular fila y columna relativas al tablero enemigo
   const col = floor((canvasX - enemyBoardX) / gameConfig.cellSize);
   const row = floor((canvasY - enemyBoardY) / gameConfig.cellSize);
 
-  gameStats.turns++;
-
   if (!isValidCell(row, col)) {
-    console.log("Clic inválido en:", {row, col, canvasX, canvasY}); // Debug
+    console.log("Clic inválido en:", {row, col, canvasX, canvasY});
     return;
   }
 
   const cellValue = gameConfig.enemyBoard[row][col];
 
-  // Resto de tu lógica original (sin cambios)
+  // Contar el disparo (todos los ataques válidos cuentan)
+  gameStats.currentGame.shots++;
+
+  // Procesar resultado del ataque
   if (cellValue === 'O' || cellValue === 'R') {
-      gameConfig.enemyBoard[row][col] = '!';
+    gameConfig.enemyBoard[row][col] = '!';
     markHit(row, col);
     gameConfig.enemyShips--;
-    gameStats.currentGame.boatHits++;
-    updateShipCount();
+    gameStats.currentGame.hits++; // Registrar impacto
+    
     updateStatus("¡Impacto! Has hundido un barco enemigo.");
     playSound(sounds.playerHit);
   } else if (cellValue === '-') {
     gameConfig.enemyBoard[row][col] = 'X';
     updateStatus("Agua... no hay barco en esa posición.");
     playSound(sounds.water);
-    gameStats.currentGame.misses++;
   } else {
+    gameStats.currentGame.shots--; // Descontar si el ataque no fue válido
     return;
   }
 
+  // Verificar fin del juego y manejar turno
   checkGameEnd('enemy');
+  updateShipCount();
+  drawBoards();
 
   if (gameConfig.doubleShot) {
     gameConfig.doubleShot = false;
     updateStatus("¡Disparo doble activado! Puedes disparar una vez más.");
   } else {
-   endPlayerTurn();
+    endPlayerTurn();
   }
-
-  if (cellValue === 'O' || cellValue === 'R') {
-    gameStats.boatHits++;
-    gameStats.currentShots++;
-    gameStats.totalShots++;
-  } else if (cellValue === '-') {
-    gameStats.misses++;
-    gameStats.currentShots++;
-    gameStats.totalShots++;
-  }
-
-  updateShipCount();
-  drawBoards();
 }
 
 function isValidCell(row, col) {
@@ -616,8 +606,14 @@ function isValidCell(row, col) {
 function aiTurn() {
   const attackCount = Math.random() < 0.4 ? 2 : 1;
 
-  // Primer ataque inmediato
+  // Primer ataque
   performAIAttack();
+  
+  // Verificar si el juego terminó después del primer ataque
+  if (gameConfig.playerShips <= 0) {
+    checkGameEnd('player');
+    return;
+  }
 
   // Segundo ataque con retraso (si aplica)
   if (attackCount === 2) {
@@ -626,12 +622,14 @@ function aiTurn() {
       performAIAttack();
       drawBoards();
       checkGameEnd('player');
-      startPlayerTurn();
+      if (gameConfig.playerShips > 0) {
+        startPlayerTurn();
+      }
     }, 800);
   } else {
-    updateShipCount();
-    checkGameEnd('player');
-    startPlayerTurn();
+    if (gameConfig.playerShips > 0) {
+      startPlayerTurn();
+    }
   }
 }
 
@@ -673,30 +671,31 @@ function processAttackResult(row, col) {
   if (isCellProtected(row, col)) {
     gameConfig.playerBoard[row][col] = 'X';
     updateStatus("¡Defensa ha bloqueado un ataque enemigo!");
-    gameConfig.playerBoard[y][x] = 'X'; // Marcar como ataque fallido
-    gameStats.misses++;
-    gameStats.currentShots++;
-    gameStats.totalShots++;
     playSound(sounds.water);
+    
+    // Estadísticas (aunque sea bloqueado, cuenta como disparo recibido)
+    gameStats.currentGame.shots++;
   }
   else if (gameConfig.playerBoard[row][col] === 'O') {
     gameConfig.playerBoard[row][col] = '!';
     markHit(row, col);
     gameConfig.playerShips--;
-    gameStats.boatHits++;
-    gameStats.currentShots++;
-    gameStats.totalShots++;
+    
+    // Actualizar estadísticas
+    gameStats.currentGame.hits++;
+    gameStats.currentGame.shots++;
+    
     updateStatus("La IA ha impactado uno de tus barcos!");
     playSound(sounds.enemyHit);
   } else {
     gameConfig.playerBoard[row][col] = 'X';
-    gameStats.misses++;
-    gameStats.currentShots++;
-    gameStats.totalShots++;
+    
+    // Solo contar como disparo recibido
+    gameStats.currentGame.shots++;
+    
     updateStatus("La IA ha atacado y falló");
     playSound(sounds.water);
   }
-
 }
 
 function checkGameEnd(loser) {
@@ -704,27 +703,21 @@ function checkGameEnd(loser) {
 
   if (shipsLeft <= 0) {
     const isVictory = loser === 'enemy';
-    const endScreenId = isVictory ? 'pantalla-victoria' : 'pantalla-derrota';
-
-    // Configurar mensaje y sonido
-    updateStatus(isVictory ? "¡Felicidades! Has ganado el juego." :
-      "¡La IA ha ganado! Mejor suerte la próxima vez.");
-    playSound(isVictory ? sounds.victory : sounds.defeat);
-
-    stopBackgroundMusic();
-    // updateStats();
-    // Actualizar estadísticas
+    
+    // Actualizar estadísticas globales
     gameStats.gamesPlayed++;
     if (isVictory) {
       gameStats.wins++;
-      mostrarFinDelJuego('victoria');
-    } else {
-
-      mostrarFinDelJuego('derrota');
     }
 
+    // Configurar mensaje y sonido
+    updateStatus(isVictory ? "¡Felicidades! Has ganado el juego." : "¡La IA ha ganado! Mejor suerte la próxima vez.");
+    playSound(isVictory ? sounds.victory : sounds.defeat);
 
-
+    stopBackgroundMusic();
+    
+    // Mostrar pantalla final correspondiente
+    mostrarFinDelJuego(isVictory ? 'victoria' : 'derrota');
   }
 }
 
@@ -854,25 +847,17 @@ function resetGame() {
     // Mantener estadísticas globales
   const globalStats = {
     gamesPlayed: gameStats.gamesPlayed,
-    wins: gameStats.wins,
-    totalShots: gameStats.totalShots
-  };
-  
-  // Resetear estadísticas de partida actual
-  gameStats.boatHits = 0;
-  gameStats.misses = 0;
-  gameStats.turns = 0;
-  gameStats.currentShots = 0;
-  gameStats.totalShots = 0;
-  gameStats.currentGame = {
-    boatHits: 0,
-    misses: 0,
-    shots: 0,
-    itemsUsed: {}
+    wins: gameStats.wins
   };
   
   // Restaurar estadísticas globales
-  Object.assign(gameStats, globalStats);
+  Object.assign(gameStats, globalStats, {
+    currentGame: {
+      shots: 0,
+      hits: 0,
+      itemsUsed: {}
+    }
+  });;
 
 
   // 2. Completely reset game state
@@ -1211,34 +1196,26 @@ function toggleStats() {
   }
 }
 
-// Modificar la función generarInformeFinal
 function generarInformeFinal() {
   const { currentGame } = gameStats;
   
-  // Actualizar estadísticas básicas (solo de esta partida)
   document.getElementById('stats-shots').textContent = currentGame.shots;
+  
   const accuracy = currentGame.shots > 0 ? 
-    Math.round((currentGame.boatHits / currentGame.shots) * 100) : 0;
+    Math.round((currentGame.hits / currentGame.shots) * 100) : 0;
   document.getElementById('stats-accuracy').textContent = `${accuracy}%`;
   
-  // Actualizar estadísticas generales
-  document.getElementById('stats-sunk').textContent = gameStats.boatHits;
-  document.getElementById('stats-wins').textContent = gameStats.wins;
+  document.getElementById('stats-sunk').textContent = currentGame.shipsSunk;
+
+  document.getElementById('stats-turns').textContent = currentGame.turns;
   
-  // Calcular precisión total de todas las partidas
-  const totalAccuracy = gameStats.totalShots > 0 ? 
-    Math.round(((gameStats.wins * gameConfig.enemyShipsTotal) / gameStats.totalShots) * 100) : 0;
-  document.getElementById('stats-total-accuracy').textContent = `${totalAccuracy}%`;
-  
-  // Procesar ítems usados en esta partida
+  // Crear sección de resumen
   const usados = Object.keys(currentGame.itemsUsed).map(item => 
     `${currentGame.itemsUsed[item]}× ${getItemName(item)}`
   ).join(', ') || "Ninguno";
   
-  // Crear sección de resumen
   const resumen = `
     <div class="stats-summary">
-      <p><strong>Turnos totales:</strong> ${gameStats.turns}</p>
       <p><strong>Ítems usados:</strong> ${usados}</p>
     </div>
   `;
@@ -1257,16 +1234,14 @@ function mostrarFinDelJuego(resultado) {
     div.classList.add('oculto');
   });
 
+  // Mostrar pantalla final
   document.getElementById('pantalla-final').classList.remove('oculto');
 
-  // Mostrar la pantalla final correspondiente
+  // Mostrar mensaje correspondiente
   if (resultado === 'victoria') {
     document.getElementById('mensaje-victoria').classList.remove('oculto');
-    gameStats.wins++; // Incrementar contador de victorias
-    playSound(sounds.victory);
-  } else if (resultado === 'derrota') {
+  } else {
     document.getElementById('mensaje-derrota').classList.remove('oculto');
-    playSound(sounds.defeat);
   }
 
   // Actualizar estadísticas
