@@ -21,15 +21,22 @@ const gameConfig = {
   maxTurnTime: 10       // Límite de tiempo por turno (segundos)
 };
 
+// Modificar el objeto gameStats
 const gameStats = {
-  hits: 0,
-  itemsUsed: {}, // Nuevo: contador por ítem
-  turns: 0,          // Disparos acertados
-  misses: 0,        // Disparos fallados
-  gamesPlayed: 0,   // Partidas jugadas
-  wins: 0,          // Partidas ganadas
-  currentShots: 0,  // Disparos en partida actual
-  totalShots: 0     // Disparos totales (todas las partidas)
+  boatHits: 0,                    // Solo para esta partida
+  itemsUsed: {},             // Solo para esta partida
+  turns: 0,                  // Solo para esta partida
+  misses: 0,                 // Solo para esta partida
+  gamesPlayed: 0,           // Contador global
+  wins: 0,                  // Contador global
+  currentShots: 0,          // Solo para esta partida
+  totalShots: 0,            // Solo para esta partida
+  currentGame: {            // Objeto para esta partida
+    boatHits: 0,
+    misses: 0,
+    shots: 0,
+    itemsUsed: {}
+  }
 };
 
 // Efectos de sonido
@@ -343,7 +350,7 @@ function initGame(mode, shipCount) {
   gameConfig.playerShips = shipCount;
   gameConfig.enemyShips = shipCount;
   gameConfig.enemyShipsTotal = shipCount; // Guarda el total inicial de barcos
-  gameStats.hits = 0;
+  gameStats.boatHits = 0;
   gameStats.misses = 0;
   gameStats.currentShots = 0;
   gameConfig.enemyShipsTotal = shipCount;
@@ -427,6 +434,7 @@ function endPlayerTurn() {
   gameConfig.isPlayerTurn = false;
   updateStatus("Turno terminado. Es el turno de la IA.");
   drawBoards();
+  gameStats.currentGame.shots++;
   setTimeout(aiTurn, 1000);
 }
 
@@ -472,10 +480,11 @@ const timerElement = document.getElementById('turn-timer');
 }
 
 function endPlayerTurnDueToTimeout() {
-  clearInterval(gameConfig.turnTimer);
-  mostrarNotificacion("¡Tiempo agotado! Pierdes tu turno.");
+  clearTurnTimer();
   gameConfig.isPlayerTurn = false;
-  updateTurnTimerDisplay();
+  updateStatus("Turno terminado. Es el turno de la IA.");
+  drawBoards();
+  gameStats.currentGame.shots++;
   setTimeout(aiTurn, 1000);
 }
 
@@ -560,10 +569,10 @@ function handlePlayerAttack(canvasX, canvasY) {
 
   // Resto de tu lógica original (sin cambios)
   if (cellValue === 'O' || cellValue === 'R') {
-    gameConfig.enemyBoard[row][col] = '!';
+      gameConfig.enemyBoard[row][col] = '!';
     markHit(row, col);
     gameConfig.enemyShips--;
-    gameStats.hits++;
+    gameStats.currentGame.boatHits++;
     updateShipCount();
     updateStatus("¡Impacto! Has hundido un barco enemigo.");
     playSound(sounds.playerHit);
@@ -571,6 +580,7 @@ function handlePlayerAttack(canvasX, canvasY) {
     gameConfig.enemyBoard[row][col] = 'X';
     updateStatus("Agua... no hay barco en esa posición.");
     playSound(sounds.water);
+    gameStats.currentGame.misses++;
   } else {
     return;
   }
@@ -585,7 +595,7 @@ function handlePlayerAttack(canvasX, canvasY) {
   }
 
   if (cellValue === 'O' || cellValue === 'R') {
-    gameStats.hits++;
+    gameStats.boatHits++;
     gameStats.currentShots++;
     gameStats.totalShots++;
   } else if (cellValue === '-') {
@@ -673,7 +683,7 @@ function processAttackResult(row, col) {
     gameConfig.playerBoard[row][col] = '!';
     markHit(row, col);
     gameConfig.playerShips--;
-    gameStats.hits++;
+    gameStats.boatHits++;
     gameStats.currentShots++;
     gameStats.totalShots++;
     updateStatus("La IA ha impactado uno de tus barcos!");
@@ -841,6 +851,30 @@ function resetGame() {
   // 1. Stop all audio and clear any intervals
   stopBackgroundMusic();
 
+    // Mantener estadísticas globales
+  const globalStats = {
+    gamesPlayed: gameStats.gamesPlayed,
+    wins: gameStats.wins,
+    totalShots: gameStats.totalShots
+  };
+  
+  // Resetear estadísticas de partida actual
+  gameStats.boatHits = 0;
+  gameStats.misses = 0;
+  gameStats.turns = 0;
+  gameStats.currentShots = 0;
+  gameStats.totalShots = 0;
+  gameStats.currentGame = {
+    boatHits: 0,
+    misses: 0,
+    shots: 0,
+    itemsUsed: {}
+  };
+  
+  // Restaurar estadísticas globales
+  Object.assign(gameStats, globalStats);
+
+
   // 2. Completely reset game state
   gameConfig.playerShips = 0;
   gameConfig.enemyShips = 0;
@@ -945,10 +979,10 @@ function getItemDescription(code) {
 function useItem(item) {
   let used = false;
 
-  if (!gameStats.itemsUsed[item]) {
-    gameStats.itemsUsed[item] = 0;
+  if (!gameStats.currentGame.itemsUsed[item]) {
+    gameStats.currentGame.itemsUsed[item] = 0;
   }
-  gameStats.itemsUsed[item]++;
+  gameStats.currentGame.itemsUsed[item]++;
 
   switch (item) {
     case 'radar':
@@ -1177,56 +1211,45 @@ function toggleStats() {
   }
 }
 
-// Tu función generarInformeFinal() con pequeñas adaptaciones
+// Modificar la función generarInformeFinal
 function generarInformeFinal() {
-  const { currentShots, hits, itemsUsed, turns } = gameStats;
-  const accuracy = currentShots > 0 ? Math.round((hits / currentShots) * 100) : 0;
-
-  const itemNames = {
-    radar: 'Radar',
-    doble: 'Doble Disparo',
-    revelar: 'Revelar Posición',
-    defensa: 'Defensa'
-  };
-
-  // Actualizar estadísticas básicas
-  document.getElementById('stats-shots').textContent = currentShots;
+  const { currentGame } = gameStats;
+  
+  // Actualizar estadísticas básicas (solo de esta partida)
+  document.getElementById('stats-shots').textContent = currentGame.shots;
+  const accuracy = currentGame.shots > 0 ? 
+    Math.round((currentGame.boatHits / currentGame.shots) * 100) : 0;
   document.getElementById('stats-accuracy').textContent = `${accuracy}%`;
-  document.getElementById('stats-sunk').textContent = gameConfig.enemyShipsTotal - gameConfig.enemyShips;
+  
+  // Actualizar estadísticas generales
+  document.getElementById('stats-sunk').textContent = gameStats.boatHits;
   document.getElementById('stats-wins').textContent = gameStats.wins;
-
-  // Calcular precisión total
-  const totalAccuracy = gameStats.totalShots > 0
-    ? Math.round(((gameStats.wins * gameConfig.enemyShipsTotal) / gameStats.totalShots) * 100)
-    : 0;
+  
+  // Calcular precisión total de todas las partidas
+  const totalAccuracy = gameStats.totalShots > 0 ? 
+    Math.round(((gameStats.wins * gameConfig.enemyShipsTotal) / gameStats.totalShots) * 100) : 0;
   document.getElementById('stats-total-accuracy').textContent = `${totalAccuracy}%`;
-
-  // Procesar ítems usados y no usados
-  const usados = Object.keys(itemsUsed).map(item =>
-    `${itemsUsed[item]}× ${itemNames[item] || item}`
+  
+  // Procesar ítems usados en esta partida
+  const usados = Object.keys(currentGame.itemsUsed).map(item => 
+    `${currentGame.itemsUsed[item]}× ${getItemName(item)}`
   ).join(', ') || "Ninguno";
-
-  const noUsados = Object.keys(itemNames)
-    .filter(item => !itemsUsed[item] || itemsUsed[item] === 0)
-    .map(item => itemNames[item])
-    .join(', ') || "Ninguno";
-
+  
   // Crear sección de resumen
   const resumen = `
     <div class="stats-summary">
-      <p><strong>Turnos totales:</strong> ${turns}</p>
+      <p><strong>Turnos totales:</strong> ${gameStats.turns}</p>
       <p><strong>Ítems usados:</strong> ${usados}</p>
-      <p><strong>Ítems no usados:</strong> ${noUsados}</p>
     </div>
   `;
-
+  
   // Insertar resumen en el panel
   const panel = document.getElementById('stats-panel');
   const prevSummary = panel.querySelector('.stats-summary');
   if (prevSummary) prevSummary.remove();
-
   panel.insertAdjacentHTML('beforeend', resumen);
 }
+
 
 function mostrarFinDelJuego(resultado) {
   // Ocultar todas las pantallas primero
