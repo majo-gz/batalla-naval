@@ -433,7 +433,7 @@ function endPlayerTurn() {
   gameConfig.isPlayerTurn = false;
   updateStatus("Turno terminado. Es el turno de la IA.");
   drawBoards();
-  gameStats.currentGame.shots++;
+  //gameStats.currentGame.shots++;
   setTimeout(aiTurn, 1000);
 }
 
@@ -483,7 +483,7 @@ function endPlayerTurnDueToTimeout() {
   gameConfig.isPlayerTurn = false;
   updateStatus("Turno terminado. Es el turno de la IA.");
   drawBoards();
-  gameStats.currentGame.shots++;
+  //gameStats.currentGame.shots++;
   setTimeout(aiTurn, 1000);
 }
 
@@ -564,7 +564,6 @@ function handlePlayerAttack(canvasX, canvasY) {
 
   const cellValue = gameConfig.enemyBoard[row][col];
 
-  // Contar el disparo (todos los ataques válidos cuentan)
   gameStats.currentGame.shots++;
 
   // Procesar resultado del ataque
@@ -581,7 +580,7 @@ function handlePlayerAttack(canvasX, canvasY) {
     updateStatus("Agua... no hay barco en esa posición.");
     playSound(sounds.water);
   } else {
-    gameStats.currentGame.shots--; // Descontar si el ataque no fue válido
+    // gameStats.currentGame.shots--; // Descontar si el ataque no fue válido
     return;
   }
 
@@ -674,7 +673,7 @@ function processAttackResult(row, col) {
     playSound(sounds.water);
     
     // Estadísticas (aunque sea bloqueado, cuenta como disparo recibido)
-    gameStats.currentGame.shots++;
+    // gameStats.currentGame.shots++;
   }
   else if (gameConfig.playerBoard[row][col] === 'O') {
     gameConfig.playerBoard[row][col] = '!';
@@ -682,8 +681,8 @@ function processAttackResult(row, col) {
     gameConfig.playerShips--;
     
     // Actualizar estadísticas
-    gameStats.currentGame.hits++;
-    gameStats.currentGame.shots++;
+    // gameStats.currentGame.hits++;
+    // gameStats.currentGame.shots++;
     
     updateStatus("La IA ha impactado uno de tus barcos!");
     playSound(sounds.enemyHit);
@@ -691,7 +690,7 @@ function processAttackResult(row, col) {
     gameConfig.playerBoard[row][col] = 'X';
     
     // Solo contar como disparo recibido
-    gameStats.currentGame.shots++;
+    // gameStats.currentGame.shots++;
     
     updateStatus("La IA ha atacado y falló");
     playSound(sounds.water);
@@ -1205,7 +1204,7 @@ function generarInformeFinal() {
     Math.round((currentGame.hits / currentGame.shots) * 100) : 0;
   document.getElementById('stats-accuracy').textContent = `${accuracy}%`;
   
-  document.getElementById('stats-sunk').textContent = currentGame.shipsSunk;
+  document.getElementById('stats-sunk').textContent = currentGame.hits;
 
   document.getElementById('stats-turns').textContent = currentGame.turns;
   
