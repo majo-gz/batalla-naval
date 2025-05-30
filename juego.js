@@ -18,7 +18,8 @@ const gameConfig = {
   enemyShipsTotal: 0,
   turnTimer: null,      // Referencia al temporizador
   timeLeft: 10,         // Segundos restantes
-  maxTurnTime: 30    // Límite de tiempo por turno (segundos)
+  maxTurnTime: 30,    // Límite de tiempo por turno (segundos)
+  temporalReveal: {} // Para rastrear celdas reveladas temporalmente
 };
 
 // Modificar el objeto gameStats
@@ -161,7 +162,9 @@ function drawBoards() {
   } else {
     drawNeonBorder(margin, margin, gameConfig.playerBoard);
   }
+
 }
+
 function drawPlacementNeonBorder(x, y, board) {
   // Copia exacta de tu drawNeonBorder original pero con colores amarillos
   push();
@@ -270,43 +273,38 @@ function drawBoard(board, x, y, isEnemy) {
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
       let content = isEnemy && board[i][j] === 'O' ? '-' : board[i][j];
+      const cellKey = `${i},${j}`;
 
-      // 1. Handle blink effect first (this affects the cell content)
-      // Handle blink effect for this cell (verde)
-      const blinkKey = `${i},${j}`;
+      // 1. Manejar efecto de revelación temporal PRIMERO (sobreescribe el contenido)
+      if (gameConfig.temporalReveal[cellKey]) {
+        content = gameConfig.temporalReveal[cellKey] === 'ship' ? 'T' : 'S';
+      }
+
+      // 2. Handle blink effect (tu código existente)
+      const blinkKey = cellKey;
       if (gameConfig.blinkEffect[blinkKey]) {
         const framesSinceHit = frameCount - gameConfig.blinkEffect[blinkKey];
-        if (framesSinceHit < 10) { // Blink for 10 frames
-          // Efecto de parpadeo verde
+        if (framesSinceHit < 10) {
           const pulse = floor(framesSinceHit / 2) % 2;
-          if (pulse === 0) {
-            content = 'B'; // Usamos 'B' para blink verde
-          }
+          if (pulse === 0) content = 'B';
         }
       }
 
-      // 2. Set base cell color
+      // 3. Set base cell color (usará 'T' o 'S' si es revelación temporal)
       setCellColor(content, i, j);
 
-      // 3. Handle protected cell borders (drawn on top of base cell)
+      // 4. Handle protected cell borders (tu código existente)
       const isProtected = !isEnemy && gameConfig.protectedCells.some(
         cell => cell.row === i && cell.col === j
       );
+      stroke(isProtected ? color(0, 255, 0) : color(0));
+      strokeWeight(isProtected ? 2 : 1);
 
-      if (isProtected) {
-        stroke(0, 255, 0); // Green border for protected cells
-        strokeWeight(2);
-      } else {
-        stroke(0); // Normal black border
-        strokeWeight(1);
-      }
-
-      // 4. Draw the cell rectangle
-      rect(j * gameConfig.cellSize, i * gameConfig.cellSize,
-        gameConfig.cellSize, gameConfig.cellSize);
+      // 5. Draw the cell (usando gameConfig.cellSize como ya haces)
+      rect(j * gameConfig.cellSize, i * gameConfig.cellSize, 
+           gameConfig.cellSize, gameConfig.cellSize);
     }
   }
-
   pop();
 }
 
@@ -317,10 +315,11 @@ function setCellColor(content, row, col) {
     'X': '#A9A9A9',  // Miss
     'R': '#FFFF66',  // Revealed
     '!': '#E64832',  // Hit
-    'P': '#90EE90',   // Protected (light green),
-    'B': '#FFFF66'   // Blink verde (verde puro)
+    'P': '#90EE90',  // Protected
+    'B': '#FFFF66',  // Blink
+    'T': '#FFA500',  // Temporal Ship (naranja)
+    'S': '#e3e39c'   // Temporal Empty (beige)
   };
-
   fill(colors[content] || '#F4F4F4');
 }
 
@@ -1089,12 +1088,10 @@ function revealRandomShip() {
 }
 
 function revealRandomPositions() {
-  // Encontrar celdas no reveladas en el tablero enemigo
+  // Encontrar celdas no reveladas
   const hiddenCells = [];
-
   for (let i = 0; i < gameConfig.boardSize; i++) {
     for (let j = 0; j < gameConfig.boardSize; j++) {
-      // Solo considerar celdas que no han sido atacadas/reveladas y no son barcos ya revelados
       if (gameConfig.enemyBoard[i][j] === '-' || gameConfig.enemyBoard[i][j] === 'O') {
         hiddenCells.push({ row: i, col: j });
       }
@@ -1106,33 +1103,36 @@ function revealRandomPositions() {
     return false;
   }
 
-  // Revelar 2 celdas (o menos si no hay suficientes)
-  const cellsToReveal = Math.min(2, hiddenCells.length);
-  let revealedShips = 0;
-
+  // Seleccionar 4 celdas aleatorias
+  const selectedCells = [];
+  const cellsToReveal = Math.min(4, hiddenCells.length);
+  
   for (let i = 0; i < cellsToReveal; i++) {
-    // Seleccionar una celda aleatoria y removerla del array para no repetir
     const randomIndex = Math.floor(Math.random() * hiddenCells.length);
-    const cell = hiddenCells.splice(randomIndex, 1)[0];
-
-    // Revelar la posición
-    if (gameConfig.enemyBoard[cell.row][cell.col] === 'O') {
-      gameConfig.enemyBoard[cell.row][cell.col] = 'R'; // Barco revelado
-      revealedShips++;
-      markHit(cell.row, cell.col); // Efecto visual para barcos
-    } else {
-      gameConfig.enemyBoard[cell.row][cell.col] = 'X'; // Agua revelada
-    }
+    selectedCells.push(hiddenCells.splice(randomIndex, 1)[0]);
   }
 
-  // Mensaje descriptivo
-  if (revealedShips > 0) {
-    updateStatus(`¡Revelación muestra ${revealedShips} barco(s) enemigo(s)!`);
-  } else {
-    updateStatus("Revelación muestra agua - no hay barcos en estas posiciones");
-  }
+  // Marcar temporalmente (usando caracteres especiales)
+  selectedCells.forEach(cell => {
+    const originalValue = gameConfig.enemyBoard[cell.row][cell.col];
+    gameConfig.enemyBoard[cell.row][cell.col] = originalValue === 'O' ? 'T' : 'S'; // Temporal Ship/Empty
+  });
 
+  // Actualizar UI
   drawBoards();
+  
+  // Restaurar después de 6 segundos
+  setTimeout(() => {
+    selectedCells.forEach(cell => {
+      const currentValue = gameConfig.enemyBoard[cell.row][cell.col];
+      gameConfig.enemyBoard[cell.row][cell.col] = 
+        (currentValue === 'T') ? 'O' : // Restaurar barco
+        (currentValue === 'S') ? '-' : // Restaurar vacío
+        currentValue; // Por si acaso
+    });
+    drawBoards();
+  }, 6000);
+
   return true;
 }
 
