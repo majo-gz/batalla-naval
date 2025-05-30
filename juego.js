@@ -18,7 +18,7 @@ const gameConfig = {
   enemyShipsTotal: 0,
   turnTimer: null,      // Referencia al temporizador
   timeLeft: 10,         // Segundos restantes
-  maxTurnTime: 10       // Límite de tiempo por turno (segundos)
+  maxTurnTime: 30    // Límite de tiempo por turno (segundos)
 };
 
 // Modificar el objeto gameStats
@@ -81,20 +81,12 @@ function setup() {
 }
 
 function setupEventListeners() {
+  // Botones existentes (los tuyos)
   document.getElementById('btn-rapido').addEventListener('click', startQuickGame);
   document.getElementById('btn-manual').addEventListener('click', showManualConfig);
   document.getElementById('btn-start-manual').addEventListener('click', startManualPlacement);
   document.getElementById('btn-new-game').addEventListener('click', resetGame);
-  //document.getElementById('btn-reiniciar-derrota').addEventListener('click', resetGame);
 
-  //document.getElementById('btn-stats-end').addEventListener('click', function () {
-  //const statsPanel = document.getElementById('stats-panel');
-  //statsPanel.classList.toggle('oculto');
-  //this.textContent = statsPanel.classList.contains('oculto')
-  //? 'Ver estadísticas'
-  //: 'Ocultar estadísticas';
-  //});
-  // Para todos los botones de estadísticas
   document.querySelectorAll('[id^="btn-stats"]').forEach(btn => {
     btn.addEventListener('click', toggleStats);
   });
@@ -156,11 +148,55 @@ function drawBoards() {
   drawBoard(gameConfig.enemyBoard, margin * 2 + 400 + boardSpacing, margin, true);
 
   // 3. Mostrar borde neón ANTES de los ataques
-  if (gameConfig.isPlayerTurn) {
+   // Solo dibujar tablero enemigo si no estamos colocando barcos
+  if (!gameConfig.placingShips) {
+    drawBoard(gameConfig.enemyBoard, margin * 2 + 400 + boardSpacing, margin, true);
+  }
+
+  // Lógica de bordes neón
+  if (gameConfig.placingShips) {
+    drawPlacementNeonBorder(margin, margin, gameConfig.playerBoard);
+  } else if (gameConfig.isPlayerTurn) {
     drawNeonBorder(margin * 2 + 400 + boardSpacing, margin, gameConfig.enemyBoard);
   } else {
     drawNeonBorder(margin, margin, gameConfig.playerBoard);
   }
+}
+function drawPlacementNeonBorder(x, y, board) {
+  // Copia exacta de tu drawNeonBorder original pero con colores amarillos
+  push();
+  translate(x, y);
+  
+  const padding = 4;
+  const cellSize = gameConfig.cellSize;
+  const boardSize = board.length;
+  const boardWidth = boardSize * cellSize;
+  
+  // Efecto amarillo
+  drawingContext.shadowBlur = 20;
+  drawingContext.shadowColor = 'rgba(255, 255, 0, 0.7)';
+
+  // Borde principal
+  noFill();
+  strokeWeight(5);
+  stroke(255, 255, 0); // Amarillo
+
+  rect(-padding, -padding, 
+       boardWidth + padding * 2, 
+       boardWidth + padding * 2,
+       8);
+
+  // Borde intermedio
+  strokeWeight(3);
+  stroke(255, 255, 150); // Amarillo claro
+
+  rect(-padding + 1, -padding + 1, 
+       boardWidth + padding * 2 - 2, 
+       boardWidth + padding * 2 - 2,
+       7);
+
+  drawingContext.shadowBlur = 0;
+  pop();
 }
 
 function drawNeonBorder(x, y, board) {
@@ -332,6 +368,7 @@ function startManualPlacement() {
   initGame('manual', ships);
   document.getElementById('manual-placement').style.display = 'none';
   updateStatus(`Coloca tus ${ships} barcos. Haz clic en tu tablero.`);
+  drawBoards();
 }
 
 function initGame(mode, shipCount) {
@@ -515,26 +552,34 @@ function mousePressed() {
 }
 
 function handleShipPlacement(canvasX, canvasY) {
-  if (canvasX < 480) {
-    const col = floor(canvasX / gameConfig.cellSize);
-    const row = floor(canvasY / gameConfig.cellSize);
+  // 1. Definir márgenes del tablero del jugador (deben coincidir con drawBoards)
+  const PLAYER_BOARD_MARGIN_X = 25; // Mismo que en drawBoards()
+  const PLAYER_BOARD_MARGIN_Y = 25;
 
-    if (isValidCell(row, col) && gameConfig.playerBoard[row][col] === '-') {
-      gameConfig.playerBoard[row][col] = 'O';
-      gameConfig.shipsPlaced++;
+  // 2. Ajustar coordenadas restando los márgenes
+  const relativeX = canvasX - PLAYER_BOARD_MARGIN_X;
+  const relativeY = canvasY - PLAYER_BOARD_MARGIN_Y;
 
-      playSound(sounds.placeShip);
-      updateShipCount();
+  // 3. Calcular fila/columna (como antes, pero con coordenadas ajustadas)
+  const col = floor(relativeX / gameConfig.cellSize);
+  const row = floor(relativeY / gameConfig.cellSize);
 
-      if (gameConfig.shipsPlaced >= gameConfig.shipsToPlace) {
-        gameConfig.placingShips = false;
-        updateStatus("Todos los barcos colocados. Tu turno!");
-      } else {
-        updateStatus(`Coloca tus barcos (${gameConfig.shipsToPlace - gameConfig.shipsPlaced} restantes)`);
-      }
+  // 4. Validar (usamos tu función existente isValidCell)
+  if (isValidCell(row, col) && gameConfig.playerBoard[row][col] === '-') {
+    gameConfig.playerBoard[row][col] = 'O';
+    gameConfig.shipsPlaced++;
 
-      drawBoards();
+    playSound(sounds.placeShip);
+    updateShipCount();
+
+    if (gameConfig.shipsPlaced >= gameConfig.shipsToPlace) {
+      gameConfig.placingShips = false;
+      updateStatus("Todos los barcos colocados. Tu turno!");
+    } else {
+      updateStatus(`Coloca tus barcos (${gameConfig.shipsToPlace - gameConfig.shipsPlaced} restantes)`);
     }
+
+    drawBoards();
   }
 }
 
@@ -603,7 +648,7 @@ function isValidCell(row, col) {
 }
 
 function aiTurn() {
-  const attackCount = Math.random() < 0.4 ? 2 : 1;
+  const attackCount = Math.random() < 0.35 ? 2 : 1;
 
   // Primer ataque
   performAIAttack();
@@ -746,6 +791,8 @@ function tryGetItem() {
     const total = Object.values(itemRarities).reduce((sum, val) => sum + val, 0);
     let random = Math.random() * total;
 
+    document.getElementById('item-prob-display').textContent =  `Prob. ítem: ${(finalProbability * 100).toFixed(1)}%`;
+
     // Seleccionar ítem basado en peso
     let selectedItem;
     for (const [item, weight] of Object.entries(itemRarities)) {
@@ -768,6 +815,7 @@ function tryGetItem() {
     playSound(sounds.item);
     updateInventoryUI();
 
+    
     // Actualizar visualización de probabilidad
     updateProbabilityDisplay();
   }
@@ -1271,16 +1319,11 @@ function calculateHitProbability() {
   const remainingShips = gameConfig.enemyShipsTotal - revealedShips;
 
   // Evitar división por cero
-  if (hiddenCells === 0 || remainingShips <= 0) {
-    return 0;
-  }
+  if (hiddenCells === 0 || remainingShips === 0) return 0.0;
 
-  // Probabilidad básica (barcos restantes / celdas ocultas)
-  let probability = (remainingShips / hiddenCells) * 100;
-
-  // Ajustar probabilidad basada en barcos encontrados
-  const hitRatio = revealedShips / gameConfig.enemyShipsTotal;
-  probability *= (1 + hitRatio * 0.5); // Aumentar probabilidad si ya hemos encontrado barcos
-
-  return Math.min(Math.round(probability), 100); // Limitar a 100%
+  // Calcular probabilidad exacta
+  const probability = (remainingShips / hiddenCells) * 100;
+  
+  // Limitar a 100% pero mantener decimales
+  return parseFloat(Math.min(probability, 100.0).toFixed(2))
 }

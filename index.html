@@ -31,7 +31,7 @@
     <div id="pantalla-juego" class="pantalla oculto">
         <div id="game-background" class="fullscreen-background"></div>
         <div class="game-header">
-            <h2>⚔️ Batalla Naval ⚔️</h2>
+            <h1>⚔️ Batalla Naval ⚔️</h1>
             <div id="status" class="game-status">Preparando juego...</div>
             <div id="ship-count" class="ship-counter">Tus barcos: 0 | Enemigos: 0</div>
             <div id="probability-display" class="probability-counter">Probabilidad de impacto: 0%</div>
@@ -39,6 +39,7 @@
         <div id="game-container" class="game-board-container"></div>
         <div id="inventario-container" class="inventory-panel">
             <h3>Inventario</h3>
+            <div id="item-prob-display" class="prob-text">Probabilidad de obtener un ítem: 30.0% </div>
             <div id="inventario-items" class="inventory-items"></div>
         </div>
         <div id="notificacion-pantalla">
@@ -49,13 +50,13 @@
     <!-- Pantalla Final (Victoria/Derrota) -->
     <div id="pantalla-final" class="pantalla oculto end-screen">
         <div id="mensaje-victoria" class="end-message oculto">
-            <h2>🎉 ¡Victoria! 🎉</h2>
+            <h1>Victoria</h1>
             <p>Has hundido toda la flota enemiga</p>
             <img src="assets/images/victory.png" alt="Victoria" class="end-image">
         </div>
 
         <div id="mensaje-derrota" class="end-message oculto">
-            <h2>💀 ¡Derrota! 💀</h2>
+            <h1>Derrota</h1>
             <p>La IA ha hundido todos tus barcos</p>
             <img src="assets/images/defeat.png" alt="Derrota" class="end-image">
         </div>
